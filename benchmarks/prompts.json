@@ -1,0 +1,74 @@
+[
+  {
+    "id": "short-qa-01",
+    "category": "short",
+    "prompt": "What is the difference between latency and throughput in system design? Answer in two sentences.",
+    "target_max_tokens": 64
+  },
+  {
+    "id": "short-qa-02",
+    "category": "short",
+    "prompt": "Explain what Grouped-Query Attention (GQA) achieves compared to Multi-Head Attention.",
+    "target_max_tokens": 64
+  },
+  {
+    "id": "short-code-01",
+    "category": "short",
+    "prompt": "Write a Python function to check if a string is a palindrome.",
+    "target_max_tokens": 80
+  },
+  {
+    "id": "short-reasoning-01",
+    "category": "short",
+    "prompt": "If a train travels 60 miles in 45 minutes, what is its average speed in miles per hour? Explain your calculation.",
+    "target_max_tokens": 80
+  },
+  {
+    "id": "medium-summary-01",
+    "category": "medium",
+    "prompt": "Summarize the key architectural benefits of PagedAttention in vLLM: how it mitigates internal fragmentation, external fragmentation, and enables zero-copy prefix sharing across concurrent request batches.",
+    "target_max_tokens": 128
+  },
+  {
+    "id": "medium-code-01",
+    "category": "medium",
+    "prompt": "Implement a thread-safe sliding-window rate limiter class in Python using collections.deque and threading.Lock. Include methods for allow_request() and get_retry_after().",
+    "target_max_tokens": 160
+  },
+  {
+    "id": "medium-sys-01",
+    "category": "medium",
+    "prompt": "Describe how Kubernetes Horizontal Pod Autoscaling (HPA) interacts with CPU utilization metrics when autoscaling stateless API gateway pods under load spike conditions.",
+    "target_max_tokens": 128
+  },
+  {
+    "id": "medium-qa-02",
+    "category": "medium",
+    "prompt": "Compare Activation-aware Weight Quantization (AWQ) against naive Round-to-Nearest (RTN) quantization for 4-bit transformer model weights. Detail why salient channels matter.",
+    "target_max_tokens": 128
+  },
+  {
+    "id": "long-analysis-01",
+    "category": "long",
+    "prompt": "You are a systems engineer evaluating self-hosted LLM inference serving on constrained consumer GPUs (8GB VRAM). Detail a complete technical plan covering: 1) Model quantization tradeoffs between AWQ and FP16, 2) Memory budgeting formula for Grouped Query Attention KV caches, 3) CUDA graph buffer memory contention vs eager execution mode, and 4) Autoscaling architecture using a stateless gateway layer in front of single-GPU instances.",
+    "target_max_tokens": 256
+  },
+  {
+    "id": "long-code-01",
+    "category": "long",
+    "prompt": "Write a comprehensive Python script using asyncio and httpx to run load tests against an OpenAI-compatible /v1/chat/completions endpoint. The script must support configurable concurrency workers, track TTFT (time to first token) using SSE streaming, record p50/p95/p99 request latencies, and export a structured JSON performance report.",
+    "target_max_tokens": 256
+  },
+  {
+    "id": "long-reasoning-01",
+    "category": "long",
+    "prompt": "A distributed microservices system processes 10,000 incoming requests per minute. 90% of requests are read operations with an average processing time of 20ms, and 10% are write operations taking 150ms. Calculate: 1) The required concurrency capacity of the system, 2) The average throughput in requests per second, and 3) The impact on latency percentiles (p50 vs p95) if write operations spike to 30% of total traffic. Show all step-by-step derivations.",
+    "target_max_tokens": 256
+  },
+  {
+    "id": "long-design-01",
+    "category": "long",
+    "prompt": "Design an enterprise inference gateway that handles rate limiting, model fallbacks, request deduplication, and semantic caching. Provide the architectural components, sequence diagram descriptions, and failover policies for high-availability production environments.",
+    "target_max_tokens": 256
+  }
+]
