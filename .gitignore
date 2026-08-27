@@ -1,0 +1,34 @@
+# Environment & secrets
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.benchmarks/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+.venv/
+venv/
+ENV/
+
+# Model & cache data
+.cache/
+hf_cache/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Agent skills
+.agent/skills/
+skills/
+

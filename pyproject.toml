@@ -1,0 +1,13 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --strict-markers"
+
+[tool.ruff]
+exclude = [
+    ".agent",
+    "skills",
+    ".git",
+    "__pycache__",
+    ".venv",
+]
