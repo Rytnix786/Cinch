@@ -89,6 +89,21 @@ class GatewaySettings(BaseSettings):
         description="Timeout in seconds for upstream vLLM requests",
         gt=0.0,
     )
+    semantic_cache_enabled: bool = Field(
+        default=True,
+        description="Enable semantic vector cache for paraphrase deduplication at gateway ingress",
+    )
+    semantic_cache_capacity: int = Field(
+        default=512,
+        description="Maximum number of prompt/response pairs in the semantic LRU cache",
+        gt=0,
+    )
+    semantic_cache_similarity_threshold: float = Field(
+        default=0.92,
+        description="Minimum cosine similarity score for a cache hit (0.0 to 1.0)",
+        gt=0.0,
+        le=1.0,
+    )
 
 
 # Default singleton instance

@@ -19,6 +19,7 @@ from gateway.circuit_breaker import CircuitBreaker
 from gateway.config import GatewaySettings, get_settings, settings
 from gateway.limiter import enforce_rate_limit, rate_limiter
 from gateway.priority_queue import PriorityRequestQueue, RequestPriority
+from gateway.semantic_cache import SemanticCache
 from gateway.telemetry import OpenTelemetrySpan, metrics_registry
 from gateway.token_counter import estimate_request_tokens
 
@@ -46,6 +47,10 @@ class GatewayState:
         self.circuit_breaker: CircuitBreaker = CircuitBreaker(
             failure_threshold=settings.circuit_failure_threshold,
             recovery_timeout_seconds=settings.circuit_recovery_timeout_seconds,
+        )
+        self.semantic_cache: SemanticCache = SemanticCache(
+            capacity=settings.semantic_cache_capacity,
+            threshold=settings.semantic_cache_similarity_threshold,
         )
 
 
@@ -163,6 +168,7 @@ async def health_check(
         "circuit_breaker": gateway_state.circuit_breaker.get_metrics(),
         "queue": gateway_state.priority_queue.get_metrics(),
         "prefix_cache": gateway_state.cache_router.get_metrics(),
+        "semantic_cache": gateway_state.semantic_cache.get_metrics(),
     }
     status_code = status.HTTP_200_OK if is_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
     return JSONResponse(content=payload, status_code=status_code)
@@ -323,7 +329,26 @@ async def chat_completions(
             headers=rate_headers,
         )
 
-    # 4. Prefix Cache Affinity Routing
+    # 4. Semantic Vector Cache Lookup (Zero-GPU Fast Path)
+    if current_settings.semantic_cache_enabled and not bool(body.get("stream", False)):
+        prompt_text = " ".join(
+            m.get("content", "") for m in body.get("messages", []) if isinstance(m.get("content"), str)
+        )
+        cached_response, similarity = gateway_state.semantic_cache.lookup(prompt_text)
+        rate_headers["X-Semantic-Cache-Similarity"] = str(similarity)
+        if cached_response is not None:
+            rate_headers["X-Semantic-Cache-Status"] = "HIT"
+            span.finish()
+            return Response(
+                content=json.dumps(cached_response),
+                status_code=200,
+                headers={**rate_headers, "Content-Type": "application/json"},
+            )
+        rate_headers["X-Semantic-Cache-Status"] = "MISS"
+    else:
+        prompt_text = ""
+
+    # 5. Prefix Cache Affinity Routing
     target_backend = current_settings.vllm_base_url
     if current_settings.prefix_cache_routing_enabled:
         _, prefix_hash = extract_prompt_prefix(body, min_chars=current_settings.prefix_min_chars)
@@ -403,6 +428,13 @@ async def chat_completions(
         upstream_resp = await client.post(upstream_url, json=upstream_body)
         if upstream_resp.status_code == 200:
             gateway_state.circuit_breaker.record_success()
+            # Store successful response in semantic cache for future paraphrase hits
+            if current_settings.semantic_cache_enabled and prompt_text:
+                try:
+                    resp_json = upstream_resp.json()
+                    gateway_state.semantic_cache.store(prompt_text, resp_json)
+                except Exception:
+                    pass  # Never let cache writes degrade the serving path
         else:
             gateway_state.circuit_breaker.record_failure()
         return Response(
@@ -413,6 +445,7 @@ async def chat_completions(
                 "Content-Type": upstream_resp.headers.get("content-type", "application/json"),
             },
         )
+
     except httpx.RequestError as exc:
         gateway_state.circuit_breaker.record_failure()
         raise HTTPException(

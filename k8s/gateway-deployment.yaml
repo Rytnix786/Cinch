@@ -22,6 +22,10 @@ spec:
         app.kubernetes.io/name: cinch-gateway
         app.kubernetes.io/component: gateway
     spec:
+      hostAliases:
+        - ip: "172.21.0.1"
+          hostnames:
+            - "host.k3d.internal"
       containers:
         - name: gateway
           image: cinch-gateway:latest

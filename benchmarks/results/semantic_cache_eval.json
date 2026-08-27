@@ -1,0 +1,49 @@
+{
+  "benchmark": "semantic_vector_cache_m16",
+  "timestamp": "2026-08-27T13:47:27Z",
+  "target_url": "http://localhost:8081",
+  "metrics": {
+    "cold_gpu_avg_latency_ms": 660.7,
+    "cache_hit_avg_latency_ms": 40.07,
+    "speedup_factor": 16.5,
+    "paraphrase_hit_rate": 0.0,
+    "paraphrase_hits": 0,
+    "paraphrase_total": 10
+  },
+  "cold_samples_ms": [
+    679.53,
+    712.56,
+    657.03,
+    660.29,
+    662.31,
+    658.15,
+    653.75,
+    646.27,
+    638.68,
+    638.42
+  ],
+  "hit_samples_ms": [
+    3.35,
+    45.35,
+    44.02,
+    43.78,
+    44.24,
+    43.79,
+    44.11,
+    44.11,
+    43.9,
+    44.07
+  ],
+  "paraphrase_samples_ms": [
+    710.56,
+    658.0,
+    633.78,
+    648.01,
+    631.41,
+    694.88,
+    641.59,
+    650.95,
+    670.66,
+    638.06
+  ]
+}
