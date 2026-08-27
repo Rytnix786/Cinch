@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm
+  namespace: cinch
+  labels:
+    app.kubernetes.io/name: vllm
+    app.kubernetes.io/component: inference-engine
+spec:
+  type: ExternalName
+  externalName: host.k3d.internal
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP

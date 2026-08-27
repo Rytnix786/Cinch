@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-config
+  namespace: cinch
+  labels:
+    app.kubernetes.io/name: cinch-gateway
+    app.kubernetes.io/component: gateway
+data:
+  VLLM_BASE_URL: "http://host.k3d.internal:8000"
+  GATEWAY_HOST: "0.0.0.0"
+  GATEWAY_PORT: "8080"
+  RATE_LIMIT_RPM: "120"
+  REQUEST_TIMEOUT_SECONDS: "120.0"

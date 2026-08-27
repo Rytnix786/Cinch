@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cinch-gateway-ingress
+  namespace: cinch
+  labels:
+    app.kubernetes.io/name: cinch-gateway
+    app.kubernetes.io/component: gateway
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cinch-gateway
+                port:
+                  number: 80
