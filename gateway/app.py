@@ -1,4 +1,4 @@
-"""FastAPI Application for Cinch LLM Gateway."""
+"""FastAPI Application for Cinch LLM Gateway with Token Rate Limiting, Priority Scheduling, & Prefix Cache Routing."""
 
 from __future__ import annotations
 
@@ -8,14 +8,17 @@ import json
 import time
 from typing import Any, AsyncGenerator, Dict, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 import httpx
 
 from gateway.auth import get_api_key
+from gateway.cache_router import PrefixCacheRouter, extract_prompt_prefix
 from gateway.config import GatewaySettings, get_settings, settings
-from gateway.limiter import enforce_rate_limit
+from gateway.limiter import enforce_rate_limit, rate_limiter
+from gateway.priority_queue import PriorityRequestQueue, RequestPriority
+from gateway.token_counter import estimate_request_tokens
 
 
 class GatewayState:
@@ -26,8 +29,18 @@ class GatewayState:
         self.total_requests: int = 0
         self.rate_limited_requests: int = 0
         self.error_requests: int = 0
+        self.high_priority_requests: int = 0
+        self.low_priority_requests: int = 0
+        self.total_tokens_processed: int = 0
         self.recent_latencies: collections.deque[float] = collections.deque(maxlen=1000)
         self.http_client: Optional[httpx.AsyncClient] = None
+        self.priority_queue: PriorityRequestQueue = PriorityRequestQueue(
+            max_active=settings.max_concurrent_interactive_requests,
+            max_queue=settings.max_queue_size,
+        )
+        self.cache_router: PrefixCacheRouter = PrefixCacheRouter(
+            capacity=settings.cache_router_capacity,
+        )
 
 
 gateway_state = GatewayState()
@@ -49,8 +62,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 app = FastAPI(
     title="Cinch LLM Gateway",
-    description="Stateless authentication, rate limiting, and request proxying layer for vLLM",
-    version="0.1.0",
+    description="Stateless token rate limiting, priority scheduling, and prefix cache routing for vLLM",
+    version="0.3.0",
     lifespan=lifespan,
 )
 
@@ -124,6 +137,8 @@ async def health_check(
         "gateway": "ok",
         "vllm": vllm_status,
         "uptime_seconds": round(uptime, 2),
+        "queue": gateway_state.priority_queue.get_metrics(),
+        "prefix_cache": gateway_state.cache_router.get_metrics(),
     }
     status_code = status.HTTP_200_OK if is_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
     return JSONResponse(content=payload, status_code=status_code)
@@ -141,8 +156,13 @@ async def metrics() -> Dict[str, Any]:
         "total_requests": gateway_state.total_requests,
         "rate_limited_requests": gateway_state.rate_limited_requests,
         "error_requests": gateway_state.error_requests,
+        "high_priority_requests": gateway_state.high_priority_requests,
+        "low_priority_requests": gateway_state.low_priority_requests,
+        "total_tokens_processed": gateway_state.total_tokens_processed,
         "average_latency_seconds": round(avg_latency, 4),
         "sample_count": len(latencies),
+        "queue_metrics": gateway_state.priority_queue.get_metrics(),
+        "prefix_cache_metrics": gateway_state.cache_router.get_metrics(),
     }
 
 
@@ -175,9 +195,9 @@ async def chat_completions(
     client: httpx.AsyncClient = Depends(get_client),
     current_settings: GatewaySettings = Depends(get_settings),
     _api_key: Optional[str] = Depends(get_api_key),
-    rate_headers: Dict[str, str] = Depends(enforce_rate_limit),
+    x_priority: Optional[str] = Header(None, alias="X-Priority"),
 ) -> Response:
-    """Authenticated and rate-limited proxy for OpenAI-compatible chat completions.
+    """Authenticated, token-budgeted, priority-scheduled, and prefix-cached proxy for chat completions.
 
     Supports both regular JSON responses and chunked Server-Sent Events (SSE) streaming.
     """
@@ -190,13 +210,95 @@ async def chat_completions(
             detail="Malformed JSON request body",
         ) from exc
 
+    # 1. Parse Priority
+    raw_prio = (x_priority or body.get("priority", "high")).lower()
+    if raw_prio in ("low", "batch", "1"):
+        priority = RequestPriority.LOW
+        gateway_state.low_priority_requests += 1
+    else:
+        priority = RequestPriority.HIGH
+        gateway_state.high_priority_requests += 1
+
+    # 2. Token Estimation & Rate Limiting
+    estimated_tokens = estimate_request_tokens(body)
+    request.state.estimated_tokens = estimated_tokens
+    gateway_state.total_tokens_processed += estimated_tokens
+
+    client_ip = request.client.host if request.client else "unknown"
+    allowed, rem_rpm, rem_tpm, retry_after, reason = rate_limiter.check(
+        client_ip,
+        max_requests=current_settings.rate_limit_rpm,
+        max_tokens=current_settings.rate_limit_tpm,
+        requested_tokens=estimated_tokens,
+    )
+
+    rate_headers = {
+        "X-RateLimit-Limit": str(current_settings.rate_limit_rpm),
+        "X-RateLimit-Remaining": str(rem_rpm),
+        "X-RateLimit-Limit-Requests": str(current_settings.rate_limit_rpm),
+        "X-RateLimit-Remaining-Requests": str(rem_rpm),
+        "X-RateLimit-Limit-Tokens": str(current_settings.rate_limit_tpm),
+        "X-RateLimit-Remaining-Tokens": str(rem_tpm),
+        "X-RateLimit-Reset": str(int(time.time() + 60.0)),
+        "X-Request-Estimated-Tokens": str(estimated_tokens),
+        "X-Request-Priority": "high" if priority == RequestPriority.HIGH else "low",
+    }
+
+    if not allowed:
+        rate_headers["Retry-After"] = str(int(retry_after))
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Rate limit exceeded: {reason}",
+            headers=rate_headers,
+        )
+
+    # 3. Prefix Cache Affinity Routing
+    target_backend = current_settings.vllm_base_url
+    cache_status = "BYPASS"
+    prefix_hash = ""
+
+    if current_settings.prefix_cache_routing_enabled:
+        _, prefix_hash = extract_prompt_prefix(body, min_chars=current_settings.prefix_min_chars)
+        if prefix_hash:
+            target_backend, is_hit = gateway_state.cache_router.route(
+                prefix_hash=prefix_hash,
+                default_target=current_settings.vllm_base_url,
+            )
+            cache_status = "HIT" if is_hit else "MISS"
+            rate_headers["X-Cache-Prefix-Hash"] = prefix_hash
+            rate_headers["X-Cache-Status"] = cache_status
+            rate_headers["X-Cache-Hit-Ratio"] = str(gateway_state.cache_router.get_metrics()["hit_ratio"])
+
+    # 4. Schedule via Priority Queue
+    try:
+        req_id = await gateway_state.priority_queue.acquire(
+            priority=priority,
+            timeout=current_settings.queue_timeout_seconds,
+        )
+    except TimeoutError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Request queue wait time exceeded threshold.",
+        ) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    rate_headers["X-Request-ID"] = req_id
+
+    # Strip gateway routing directives before forwarding to upstream vLLM
+    upstream_body = {k: v for k, v in body.items() if k not in ("priority",)}
+
+    # 5. Proxy to upstream inference backend
     is_streaming = bool(body.get("stream", False))
-    upstream_url = f"{current_settings.vllm_base_url.rstrip('/')}/v1/chat/completions"
+    upstream_url = f"{target_backend.rstrip('/')}/v1/chat/completions"
 
     if is_streaming:
         async def stream_generator() -> AsyncGenerator[bytes, None]:
             try:
-                async with client.stream("POST", upstream_url, json=body) as upstream_resp:
+                async with client.stream("POST", upstream_url, json=upstream_body) as upstream_resp:
                     if upstream_resp.status_code != 200:
                         error_body = await upstream_resp.aread()
                         yield error_body
@@ -205,6 +307,8 @@ async def chat_completions(
                         yield chunk
             except httpx.RequestError as exc:
                 yield f"data: {{\"error\": \"Upstream connection error: {exc}\"}}\n\n".encode("utf-8")
+            finally:
+                await gateway_state.priority_queue.release()
 
         return StreamingResponse(
             stream_generator(),
@@ -214,7 +318,7 @@ async def chat_completions(
 
     # Non-streaming request
     try:
-        upstream_resp = await client.post(upstream_url, json=body)
+        upstream_resp = await client.post(upstream_url, json=upstream_body)
         return Response(
             content=upstream_resp.content,
             status_code=upstream_resp.status_code,
@@ -228,3 +332,5 @@ async def chat_completions(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Upstream vLLM error: {exc}",
         ) from exc
+    finally:
+        await gateway_state.priority_queue.release()
