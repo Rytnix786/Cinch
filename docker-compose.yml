@@ -1,0 +1,61 @@
+services:
+  vllm:
+    image: ${VLLM_IMAGE:-vllm/vllm-openai:latest}
+    container_name: cinch-vllm
+    runtime: nvidia
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN:-}
+      - VLLM_WSL2_ENABLE_PIN_MEMORY=1
+    volumes:
+      - ${HF_CACHE_DIR:-~/.cache/huggingface}:/root/.cache/huggingface
+    ports:
+      - "${VLLM_PORT:-8000}:8000"
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    command: >
+      serve ${MODEL_NAME:-Qwen/Qwen2.5-7B-Instruct-AWQ}
+      --quantization ${QUANTIZATION:-awq}
+      --max-model-len ${MAX_MODEL_LEN:-4096}
+      --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION:-0.85}
+      --enforce-eager
+      --dtype ${DTYPE:-half}
+      --host 0.0.0.0
+      --port 8000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 45s
+
+  gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gateway
+    container_name: cinch-gateway
+    depends_on:
+      vllm:
+        condition: service_healthy
+    environment:
+      - VLLM_BASE_URL=http://vllm:8000
+      - GATEWAY_HOST=0.0.0.0
+      - GATEWAY_PORT=8080
+      - GATEWAY_API_KEY=${GATEWAY_API_KEY:-}
+      - RATE_LIMIT_RPM=${RATE_LIMIT_RPM:-60}
+      - REQUEST_TIMEOUT_SECONDS=${REQUEST_TIMEOUT_SECONDS:-60.0}
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
