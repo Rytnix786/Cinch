@@ -1,0 +1,87 @@
+{
+  "benchmark": "multi_lora_routing_m17",
+  "timestamp": "2026-08-27T13:52:35Z",
+  "target_url": "http://localhost:8081",
+  "discovered_models": [
+    "Qwen/Qwen2.5-7B-Instruct-AWQ",
+    "Qwen/Qwen2.5-7B-Instruct-AWQ:sql-coder",
+    "sql-coder",
+    "Qwen/Qwen2.5-7B-Instruct-AWQ:python-agent",
+    "python-agent",
+    "Qwen/Qwen2.5-7B-Instruct-AWQ:medical-expert",
+    "medical-expert",
+    "Qwen/Qwen2.5-7B-Instruct-AWQ:legal-analyst",
+    "legal-analyst"
+  ],
+  "vram_economics": {
+    "base_model_vram_gb": 4.4,
+    "lora_adapter_vram_gb": 0.1,
+    "num_adapters": 4,
+    "multiplexed_vram_gb": 4.8,
+    "duplicated_vram_gb": 22.0,
+    "vram_savings_pct": 78.2,
+    "vram_compression_ratio": 4.58
+  },
+  "metrics": {
+    "total_requests": 5,
+    "successful_routes": 5,
+    "average_latency_ms": 566.94
+  },
+  "samples": [
+    {
+      "target": "base_model",
+      "requested_model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+      "expected_adapter": "none",
+      "resolved_adapter": "none",
+      "resolved_base_model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+      "latency_ms": 597.19,
+      "status_code": 200,
+      "cache_status": "MISS",
+      "passed": true
+    },
+    {
+      "target": "compound_sql",
+      "requested_model": "Qwen/Qwen2.5-7B-Instruct-AWQ:sql-coder",
+      "expected_adapter": "sql-coder",
+      "resolved_adapter": "sql-coder",
+      "resolved_base_model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+      "latency_ms": 549.97,
+      "status_code": 200,
+      "cache_status": "MISS",
+      "passed": true
+    },
+    {
+      "target": "compound_python",
+      "requested_model": "Qwen/Qwen2.5-7B-Instruct-AWQ:python-agent",
+      "expected_adapter": "python-agent",
+      "resolved_adapter": "python-agent",
+      "resolved_base_model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+      "latency_ms": 546.24,
+      "status_code": 200,
+      "cache_status": "MISS",
+      "passed": true
+    },
+    {
+      "target": "alias_medical",
+      "requested_model": "medical-expert",
+      "expected_adapter": "medical-expert",
+      "resolved_adapter": "medical-expert",
+      "resolved_base_model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+      "latency_ms": 549.81,
+      "status_code": 200,
+      "cache_status": "MISS",
+      "passed": true
+    },
+    {
+      "target": "alias_legal",
+      "requested_model": "legal-analyst",
+      "expected_adapter": "legal-analyst",
+      "resolved_adapter": "legal-analyst",
+      "resolved_base_model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+      "latency_ms": 591.49,
+      "status_code": 200,
+      "cache_status": "MISS",
+      "passed": true
+    }
+  ]
+}

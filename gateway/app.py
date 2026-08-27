@@ -15,13 +15,20 @@ import httpx
 
 from gateway.auth import get_api_key
 from gateway.cache_router import PrefixCacheRouter, extract_prompt_prefix
+from gateway.cascade_router import CascadeRouter
 from gateway.circuit_breaker import CircuitBreaker
+from gateway.compressor import PromptCompressor
 from gateway.config import GatewaySettings, get_settings, settings
+from gateway.finops import FinOpsEngine
+from gateway.grammar_guard import GrammarGuard
+from gateway.guardrails import GuardrailsScanner
 from gateway.limiter import enforce_rate_limit, rate_limiter
+from gateway.lora_router import LoRARouter
 from gateway.priority_queue import PriorityRequestQueue, RequestPriority
 from gateway.semantic_cache import SemanticCache
 from gateway.telemetry import OpenTelemetrySpan, metrics_registry
 from gateway.token_counter import estimate_request_tokens
+from gateway.tool_engine import ToolEngine
 
 
 class GatewayState:
@@ -51,6 +58,44 @@ class GatewayState:
         self.semantic_cache: SemanticCache = SemanticCache(
             capacity=settings.semantic_cache_capacity,
             threshold=settings.semantic_cache_similarity_threshold,
+        )
+        self.lora_router: LoRARouter = LoRARouter(
+            default_base_model=settings.lora_default_base_model,
+            enabled=settings.lora_routing_enabled,
+        )
+        self.grammar_guard: GrammarGuard = GrammarGuard(
+            enabled=settings.grammar_guard_enabled,
+            auto_repair=settings.grammar_guard_auto_repair,
+        )
+        self.guardrails: GuardrailsScanner = GuardrailsScanner(
+            enabled=settings.guardrails_enabled,
+            injection_defense_enabled=settings.guardrails_injection_defense_enabled,
+            pii_redaction_enabled=settings.guardrails_pii_redaction_enabled,
+            system_prompt_leak_defense=settings.guardrails_system_prompt_leak_defense,
+        )
+        self.cascade_router: CascadeRouter = CascadeRouter(
+            enabled=settings.cascade_routing_enabled,
+            small_model=settings.cascade_small_model,
+            large_model=settings.cascade_large_model,
+            complexity_threshold=settings.cascade_complexity_threshold,
+        )
+        self.compressor: PromptCompressor = PromptCompressor(
+            enabled=settings.compressor_enabled,
+            min_tokens=settings.compressor_min_tokens,
+            target_ratio=settings.compressor_target_ratio,
+            preserve_code_blocks=settings.compressor_preserve_code_blocks,
+        )
+        self.tool_engine: ToolEngine = ToolEngine(
+            enabled=settings.tool_engine_enabled,
+            max_iterations=settings.tool_engine_max_iterations,
+            sandbox_timeout_seconds=settings.tool_engine_sandbox_timeout_seconds,
+        )
+        self.finops: FinOpsEngine = FinOpsEngine(
+            enabled=settings.finops_enabled,
+            default_budget_usd=settings.finops_default_budget_usd,
+            enforce_budgets=settings.finops_enforce_budgets,
+            prompt_rate_per_1k=settings.finops_prompt_rate_per_1k,
+            completion_rate_per_1k=settings.finops_completion_rate_per_1k,
         )
 
 
@@ -169,6 +214,13 @@ async def health_check(
         "queue": gateway_state.priority_queue.get_metrics(),
         "prefix_cache": gateway_state.cache_router.get_metrics(),
         "semantic_cache": gateway_state.semantic_cache.get_metrics(),
+        "lora_router": gateway_state.lora_router.get_metrics(),
+        "grammar_guard": gateway_state.grammar_guard.get_metrics(),
+        "guardrails": gateway_state.guardrails.get_metrics(),
+        "cascade_router": gateway_state.cascade_router.get_metrics(),
+        "compressor": gateway_state.compressor.get_metrics(),
+        "tool_engine": gateway_state.tool_engine.get_metrics(),
+        "finops": gateway_state.finops.get_metrics(),
     }
     status_code = status.HTTP_200_OK if is_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
     return JSONResponse(content=payload, status_code=status_code)
@@ -227,13 +279,38 @@ async def list_models(
         resp = await client.get(upstream_url)
         if resp.status_code == 200:
             gateway_state.circuit_breaker.record_success()
+            models_data = resp.json()
+            if current_settings.lora_routing_enabled:
+                models_data = gateway_state.lora_router.synthesize_models_response(models_data)
+            if current_settings.cascade_routing_enabled:
+                created_ts = int(time.time())
+                for auto_id, desc in [
+                    ("auto", "Smart Model Cascading auto-router (0.5B small tier vs. 7B large tier)"),
+                    ("auto:cascade", "Smart Model Cascading tier selector"),
+                ]:
+                    if not any(m.get("id") == auto_id for m in models_data.get("data", [])):
+                        models_data.setdefault("data", []).append({
+                            "id": auto_id,
+                            "object": "model",
+                            "created": created_ts,
+                            "owned_by": "cinch-cascade-router",
+                            "description": desc,
+                            "root": "auto",
+                            "parent": None,
+                            "permission": [],
+                        })
+            return JSONResponse(
+                content=models_data,
+                status_code=200,
+                headers=rate_headers,
+            )
         else:
             gateway_state.circuit_breaker.record_failure()
-        return Response(
-            content=resp.content,
-            status_code=resp.status_code,
-            headers={**rate_headers, "Content-Type": resp.headers.get("content-type", "application/json")},
-        )
+            return Response(
+                content=resp.content,
+                status_code=resp.status_code,
+                headers={**rate_headers, "Content-Type": resp.headers.get("content-type", "application/json")},
+            )
     except httpx.RequestError as exc:
         gateway_state.circuit_breaker.record_failure()
         raise HTTPException(
@@ -249,6 +326,10 @@ async def chat_completions(
     current_settings: GatewaySettings = Depends(get_settings),
     _api_key: Optional[str] = Depends(get_api_key),
     x_priority: Optional[str] = Header(None, alias="X-Priority"),
+    x_compaction: Optional[str] = Header(None, alias="X-Prompt-Compaction"),
+    x_server_tools: Optional[str] = Header(None, alias="X-Server-Tool-Execution"),
+    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
+    x_team_id: Optional[str] = Header(None, alias="X-Team-ID"),
     traceparent: Optional[str] = Header(None, alias="traceparent"),
 ) -> Response:
     """Authenticated, rate-limited, priority-scheduled, circuit-broken chat completions proxy."""
@@ -282,9 +363,79 @@ async def chat_completions(
             detail="Malformed JSON request body",
         ) from exc
 
-    model_name = body.get("model", "unknown")
+    # 1. Multi-Tenant FinOps Pre-Flight Budget Check
+    tenant_id = (x_tenant_id or body.get("tenant_id", "default")).lower()
+    team_id = (x_team_id or body.get("team_id", "engineering")).lower()
+    if current_settings.finops_enabled:
+        budget_ok, budget_reason, _ = gateway_state.finops.check_budget(tenant_id)
+        if not budget_ok:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail=budget_reason,
+                headers={
+                    "X-FinOps-Tenant-ID": tenant_id,
+                    "X-FinOps-Budget-Remaining-USD": "0.000000",
+                    "X-Tenant-Budget-Exceeded": "true",
+                },
+            )
 
-    # 2. Parse Priority
+    # 2. Ingress Security Guardrails & PII Anonymization
+    pii_found_total: list[str] = []
+    if current_settings.guardrails_enabled:
+        messages = body.get("messages", [])
+        for msg in messages:
+            content = msg.get("content")
+            if isinstance(content, str) and content:
+                scan_res = gateway_state.guardrails.scan_ingress(content)
+                if not scan_res.is_safe:
+                    headers = {
+                        "X-Guardrails-Status": "BLOCKED",
+                        "X-Guardrails-Violation": scan_res.violation_type or "SECURITY_VIOLATION",
+                    }
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Security Guardrail Violation: {scan_res.violation_type}",
+                        headers=headers,
+                    )
+                if scan_res.pii_types_found:
+                    msg["content"] = scan_res.redacted_text
+                    pii_found_total.extend(scan_res.pii_types_found)
+
+    # 3. Context & Prompt Compaction (LLMLingua Heuristic)
+    compaction_enabled = current_settings.compressor_enabled
+    if x_compaction is not None:
+        compaction_enabled = x_compaction.lower() not in ("false", "0", "no", "off")
+
+    compaction_res = None
+    if compaction_enabled:
+        messages = body.get("messages", [])
+        compacted_messages, compaction_res = gateway_state.compressor.compress_messages(messages)
+        if compaction_res.is_compacted:
+            body["messages"] = compacted_messages
+
+    # 4. Extract Structured Output & JSON Grammar Constraints
+    grammar_constraint = gateway_state.grammar_guard.extract_constraints(body)
+
+    # 5. Smart Model Cascading & Complexity Routing
+    full_prompt_text = " ".join(
+        m.get("content", "") for m in body.get("messages", []) if isinstance(m.get("content"), str)
+    )
+    raw_model_requested = body.get("model", "auto")
+    selected_model, cascade_analysis = gateway_state.cascade_router.resolve_model(
+        requested_model=raw_model_requested,
+        prompt=full_prompt_text,
+        has_schema=grammar_constraint.is_active,
+    )
+    body["model"] = selected_model
+
+    # 6. Resolve Multi-LoRA Compound Model Identifiers
+    adapter_name: Optional[str] = None
+    if current_settings.lora_routing_enabled:
+        body, adapter_name, model_name = gateway_state.lora_router.resolve_request(body)
+    else:
+        model_name = body.get("model", "unknown")
+
+    # 3. Parse Priority
     raw_prio = (x_priority or body.get("priority", "high")).lower()
     if raw_prio in ("low", "batch", "1"):
         priority = RequestPriority.LOW
@@ -293,7 +444,7 @@ async def chat_completions(
         priority = RequestPriority.HIGH
         gateway_state.high_priority_requests += 1
 
-    # 3. Token Estimation & Rate Limiting
+    # 4. Token Estimation & Rate Limiting
     estimated_tokens = estimate_request_tokens(body)
     request.state.estimated_tokens = estimated_tokens
     gateway_state.total_tokens_processed += estimated_tokens
@@ -318,6 +469,26 @@ async def chat_completions(
         "X-Request-Estimated-Tokens": str(estimated_tokens),
         "X-Request-Priority": "high" if priority == RequestPriority.HIGH else "low",
         "X-Circuit-Breaker-State": cb_state,
+        "X-LoRA-Adapter-Active": adapter_name or "none",
+        "X-LoRA-Base-Model": model_name,
+        "X-Grammar-Guard-Type": grammar_constraint.constraint_type,
+        "X-Guardrails-Status": "PASSED",
+        "X-Guardrails-PII-Redacted": "true" if pii_found_total else "false",
+        "X-Cascade-Routing-Tier": cascade_analysis.tier.value,
+        "X-Cascade-Complexity-Score": str(round(cascade_analysis.score, 3)),
+        "X-Cascade-Selected-Model": selected_model,
+        "X-Cascade-Reason": cascade_analysis.reason,
+        "X-Prompt-Compacted": "true" if (compaction_res and compaction_res.is_compacted) else "false",
+        "X-Prompt-Original-Tokens": str(compaction_res.original_tokens if compaction_res else estimated_tokens),
+        "X-Prompt-Compacted-Tokens": str(compaction_res.compacted_tokens if compaction_res else estimated_tokens),
+        "X-Prompt-Compaction-Ratio": str(compaction_res.compression_ratio if compaction_res else 1.0),
+        "X-Tool-Engine-Executed": "false",
+        "X-Tool-Engine-Iterations": "0",
+        "X-Tool-Engine-Tools-Used": "none",
+        "X-FinOps-Tenant-ID": tenant_id,
+        "X-FinOps-Request-Cost-USD": "0.000000",
+        "X-FinOps-Tenant-Spend-USD": "0.000000",
+        "X-FinOps-Budget-Remaining-USD": "100.000000",
         "traceparent": span.get_w3c_traceparent(),
     }
 
@@ -338,6 +509,17 @@ async def chat_completions(
         rate_headers["X-Semantic-Cache-Similarity"] = str(similarity)
         if cached_response is not None:
             rate_headers["X-Semantic-Cache-Status"] = "HIT"
+            if current_settings.finops_enabled:
+                cost_rec = gateway_state.finops.record_usage(
+                    tenant_id=tenant_id,
+                    team_id=team_id,
+                    prompt_tokens=estimated_tokens,
+                    completion_tokens=20,
+                )
+                rate_headers["X-FinOps-Tenant-ID"] = tenant_id
+                rate_headers["X-FinOps-Request-Cost-USD"] = f"{cost_rec.total_cost_usd:.6f}"
+                rate_headers["X-FinOps-Tenant-Spend-USD"] = f"{cost_rec.total_spend_usd:.6f}"
+                rate_headers["X-FinOps-Budget-Remaining-USD"] = f"{cost_rec.budget_remaining_usd:.6f}"
             span.finish()
             return Response(
                 content=json.dumps(cached_response),
@@ -387,6 +569,8 @@ async def chat_completions(
 
     # Strip gateway routing directives before forwarding to upstream vLLM
     upstream_body = {k: v for k, v in body.items() if k not in ("priority",)}
+    if current_settings.tool_engine_enabled and "tools" in upstream_body:
+        upstream_body, _ = gateway_state.tool_engine.prepare_upstream_request(upstream_body)
 
     # 6. Proxy to upstream inference backend
     is_streaming = bool(body.get("stream", False))
@@ -426,8 +610,118 @@ async def chat_completions(
     # Non-streaming request
     try:
         upstream_resp = await client.post(upstream_url, json=upstream_body)
+        content_bytes = upstream_resp.content
+
         if upstream_resp.status_code == 200:
             gateway_state.circuit_breaker.record_success()
+
+            # Server-Side Agentic Tool Execution Loop
+            server_tools_active = current_settings.tool_engine_enabled and (
+                (x_server_tools and x_server_tools.lower() in ("true", "1", "yes"))
+                or body.get("server_tool_execution") is True
+                or bool(body.get("tools"))
+            )
+
+            tools_executed_list: list[str] = []
+            tool_iterations = 0
+
+            if server_tools_active:
+                try:
+                    curr_resp_json = upstream_resp.json()
+                    tool_calls = gateway_state.tool_engine.extract_tool_calls(curr_resp_json)
+
+                    while tool_calls and tool_iterations < current_settings.tool_engine_max_iterations:
+                        tool_iterations += 1
+                        asst_msg = curr_resp_json["choices"][0]["message"]
+                        upstream_body.setdefault("messages", []).append(asst_msg)
+
+                        for tc in tool_calls:
+                            fn = tc.get("function", {})
+                            fn_name = fn.get("name", "")
+                            fn_args = fn.get("arguments", {})
+                            call_id = tc.get("id", f"call_{tool_iterations}")
+
+                            tool_res = gateway_state.tool_engine.execute_tool_call(fn_name, fn_args, call_id)
+                            tools_executed_list.append(fn_name)
+                            upstream_body["messages"].append(tool_res.to_tool_message())
+
+                        iter_resp = await client.post(upstream_url, json=upstream_body)
+                        if iter_resp.status_code == 200:
+                            curr_resp_json = iter_resp.json()
+                            content_bytes = iter_resp.content
+                            tool_calls = gateway_state.tool_engine.extract_tool_calls(curr_resp_json)
+                        else:
+                            break
+                except Exception:
+                    pass
+
+            rate_headers["X-Tool-Engine-Executed"] = "true" if tools_executed_list else "false"
+            rate_headers["X-Tool-Engine-Iterations"] = str(tool_iterations)
+            rate_headers["X-Tool-Engine-Tools-Used"] = ",".join(set(tools_executed_list)) if tools_executed_list else "none"
+
+            # Enforce and sanitize structured outputs if constraint is active
+            if grammar_constraint.is_active:
+                try:
+                    resp_json = upstream_resp.json()
+                    choices = resp_json.get("choices", [])
+                    if choices and isinstance(choices[0], dict):
+                        msg = choices[0].get("message", {})
+                        raw_msg_content = msg.get("content", "")
+                        is_valid, sanitized_content, status_label = gateway_state.grammar_guard.validate_constraint(
+                            raw_msg_content, grammar_constraint
+                        )
+                        rate_headers["X-Grammar-Guard-Status"] = status_label
+                        if sanitized_content != raw_msg_content:
+                            msg["content"] = sanitized_content
+                            content_bytes = json.dumps(resp_json).encode("utf-8")
+                except Exception:
+                    rate_headers["X-Grammar-Guard-Status"] = "ERROR"
+            else:
+                rate_headers["X-Grammar-Guard-Status"] = "UNCONSTRAINED"
+
+            # Apply egress PII & system prompt leakage defense
+            if current_settings.guardrails_enabled:
+                try:
+                    sys_prompt = next(
+                        (m.get("content", "") for m in body.get("messages", []) if m.get("role") == "system"),
+                        None,
+                    )
+                    resp_json = json.loads(content_bytes.decode("utf-8"))
+                    choices = resp_json.get("choices", [])
+                    if choices and isinstance(choices[0], dict):
+                        msg = choices[0].get("message", {})
+                        curr_content = msg.get("content", "")
+                        sanitized_content, egress_modified = gateway_state.guardrails.sanitize_egress(
+                            curr_content, system_prompt=sys_prompt
+                        )
+                        if egress_modified:
+                            msg["content"] = sanitized_content
+                            content_bytes = json.dumps(resp_json).encode("utf-8")
+                except Exception:
+                    pass
+
+            # Record multi-tenant FinOps cost attribution
+            if current_settings.finops_enabled:
+                try:
+                    resp_json_obj = json.loads(content_bytes.decode("utf-8"))
+                    usage_obj = resp_json_obj.get("usage", {})
+                    p_toks = usage_obj.get("prompt_tokens", estimated_tokens)
+                    c_toks = usage_obj.get("completion_tokens", 30)
+                except Exception:
+                    p_toks = estimated_tokens
+                    c_toks = 30
+
+                cost_rec = gateway_state.finops.record_usage(
+                    tenant_id=tenant_id,
+                    team_id=team_id,
+                    prompt_tokens=p_toks,
+                    completion_tokens=c_toks,
+                )
+                rate_headers["X-FinOps-Tenant-ID"] = tenant_id
+                rate_headers["X-FinOps-Request-Cost-USD"] = f"{cost_rec.total_cost_usd:.6f}"
+                rate_headers["X-FinOps-Tenant-Spend-USD"] = f"{cost_rec.total_spend_usd:.6f}"
+                rate_headers["X-FinOps-Budget-Remaining-USD"] = f"{cost_rec.budget_remaining_usd:.6f}"
+
             # Store successful response in semantic cache for future paraphrase hits
             if current_settings.semantic_cache_enabled and prompt_text:
                 try:
@@ -437,8 +731,9 @@ async def chat_completions(
                     pass  # Never let cache writes degrade the serving path
         else:
             gateway_state.circuit_breaker.record_failure()
+
         return Response(
-            content=upstream_resp.content,
+            content=content_bytes,
             status_code=upstream_resp.status_code,
             headers={
                 **rate_headers,
@@ -455,3 +750,26 @@ async def chat_completions(
     finally:
         await gateway_state.priority_queue.release()
         span.finish()
+
+
+@app.get("/v1/tenants/usage")
+async def get_tenants_usage(
+    tenant_id: Optional[str] = None,
+    _api_key: Optional[str] = Depends(get_api_key),
+) -> JSONResponse:
+    """Authenticated endpoint returning real-time multi-tenant FinOps usage ledgers."""
+    usage_data = gateway_state.finops.get_tenant_usage(tenant_id=tenant_id)
+    return JSONResponse(content=usage_data, status_code=status.HTTP_200_OK)
+
+
+@app.post("/v1/tenants/budget")
+async def set_tenant_budget(
+    request: Request,
+    _api_key: Optional[str] = Depends(get_api_key),
+) -> JSONResponse:
+    """Authenticated endpoint to dynamically adjust tenant budget allocations."""
+    body = await request.json()
+    tenant_id = body.get("tenant_id", "default")
+    budget_limit = float(body.get("budget_limit_usd", 100.0))
+    tenant_record = gateway_state.finops.set_budget(tenant_id, budget_limit)
+    return JSONResponse(content=tenant_record.to_dict(), status_code=status.HTTP_200_OK)

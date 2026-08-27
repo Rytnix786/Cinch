@@ -1,0 +1,58 @@
+{
+  "benchmark": "agentic_tool_execution_m22",
+  "timestamp": "2026-08-27T14:12:35Z",
+  "target_url": "http://localhost:8081",
+  "metrics": {
+    "total_scenarios": 4,
+    "passed_count": 4,
+    "accuracy_pct": 100.0,
+    "average_latency_ms": 1660.36,
+    "sandbox_latency_overhead_ms": 1.2
+  },
+  "scenarios": [
+    {
+      "scenario": "calculator_algebraic_computation",
+      "prompt": "What is the exact value of 45 multiplied by 12 plus the square root of 144?",
+      "expected_tool": "calculator",
+      "tools_used": "calculator",
+      "tool_executed": true,
+      "iterations": 1,
+      "status_code": 200,
+      "latency_ms": 1547.84,
+      "passed": true
+    },
+    {
+      "scenario": "sql_database_query",
+      "prompt": "Run a SQL query to find all employees with a salary greater than 120000.",
+      "expected_tool": "sql_runner",
+      "tools_used": "sql_runner",
+      "tool_executed": true,
+      "iterations": 1,
+      "status_code": 200,
+      "latency_ms": 2056.62,
+      "passed": true
+    },
+    {
+      "scenario": "python_repl_data_transformation",
+      "prompt": "Execute Python code to calculate the average of [10, 20, 30, 40, 50].",
+      "expected_tool": "python_repl",
+      "tools_used": "python_repl",
+      "tool_executed": true,
+      "iterations": 1,
+      "status_code": 200,
+      "latency_ms": 1812.77,
+      "passed": true
+    },
+    {
+      "scenario": "direct_conversational_no_tools",
+      "prompt": "Explain what a database foreign key constraint is in simple terms.",
+      "expected_tool": "none",
+      "tools_used": "none",
+      "tool_executed": false,
+      "iterations": 0,
+      "status_code": 200,
+      "latency_ms": 1224.2,
+      "passed": true
+    }
+  ]
+}

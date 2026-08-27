@@ -1,0 +1,59 @@
+{
+  "benchmark": "context_prompt_compaction_m21",
+  "timestamp": "2026-08-27T14:08:09Z",
+  "target_url": "http://localhost:8081",
+  "metrics": {
+    "total_scenarios": 4,
+    "passed_count": 4,
+    "average_reduction_pct": 23.1,
+    "total_tokens_saved": 55,
+    "effective_concurrency_multiplier": 1.3,
+    "average_latency_ms": 637.06
+  },
+  "scenarios": [
+    {
+      "scenario": "verbose_rag_document_context",
+      "category": "rag_pipeline",
+      "original_tokens": 107,
+      "compacted_tokens": 80,
+      "tokens_saved": 27,
+      "reduction_pct": 25.2,
+      "is_compacted": true,
+      "latency_ms": 657.66,
+      "passed": true
+    },
+    {
+      "scenario": "multi_turn_customer_support_dialogue",
+      "category": "multi_turn_chat",
+      "original_tokens": 65,
+      "compacted_tokens": 55,
+      "tokens_saved": 10,
+      "reduction_pct": 15.4,
+      "is_compacted": true,
+      "latency_ms": 633.62,
+      "passed": true
+    },
+    {
+      "scenario": "technical_code_problem_description",
+      "category": "software_engineering",
+      "original_tokens": 63,
+      "compacted_tokens": 45,
+      "tokens_saved": 18,
+      "reduction_pct": 28.6,
+      "is_compacted": true,
+      "latency_ms": 634.45,
+      "passed": true
+    },
+    {
+      "scenario": "short_factoid_query_bypass",
+      "category": "short_query",
+      "original_tokens": 11,
+      "compacted_tokens": 11,
+      "tokens_saved": 0,
+      "reduction_pct": 0.0,
+      "is_compacted": false,
+      "latency_ms": 622.51,
+      "passed": true
+    }
+  ]
+}

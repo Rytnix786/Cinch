@@ -1,0 +1,87 @@
+{
+  "benchmark": "smart_model_cascading_m20",
+  "timestamp": "2026-08-27T14:04:02Z",
+  "target_url": "http://localhost:8081",
+  "metrics": {
+    "total_scenarios": 6,
+    "routing_accuracy_pct": 100.0,
+    "small_tier_count": 3,
+    "large_tier_count": 3,
+    "estimated_gpu_energy_saved_pct": 46.5,
+    "average_latency_ms": 354.96
+  },
+  "scenarios": [
+    {
+      "scenario": "simple_greeting",
+      "category": "chit_chat",
+      "prompt": "Hello! Good morning.",
+      "expected_tier": "SMALL",
+      "assigned_tier": "SMALL",
+      "complexity_score": 0.05,
+      "selected_model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "reason": "baseline_heuristic",
+      "latency_ms": 107.62,
+      "passed": true
+    },
+    {
+      "scenario": "sentiment_classification",
+      "category": "text_classification",
+      "prompt": "Classify sentiment of this review: 'The latency was exceptional and rock solid.'",
+      "expected_tier": "SMALL",
+      "assigned_tier": "SMALL",
+      "complexity_score": 0.0,
+      "selected_model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "reason": "simple_intent",
+      "latency_ms": 7.72,
+      "passed": true
+    },
+    {
+      "scenario": "short_factoid_qa",
+      "category": "factoid_qa",
+      "prompt": "What is the capital of France?",
+      "expected_tier": "SMALL",
+      "assigned_tier": "SMALL",
+      "complexity_score": 0.0,
+      "selected_model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "reason": "simple_intent",
+      "latency_ms": 48.36,
+      "passed": true
+    },
+    {
+      "scenario": "async_python_code_generator",
+      "category": "software_engineering",
+      "prompt": "Write a Python function using async def to fetch data concurrently with a connection pool.",
+      "expected_tier": "LARGE",
+      "assigned_tier": "LARGE",
+      "complexity_score": 0.55,
+      "selected_model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+      "reason": "code_syntax",
+      "latency_ms": 664.08,
+      "passed": true
+    },
+    {
+      "scenario": "multi_table_sql_join",
+      "category": "database_engineering",
+      "prompt": "Write a SQL query: SELECT department_id, avg(salary) FROM employees GROUP BY department_id HAVING avg(salary) > 80000",
+      "expected_tier": "LARGE",
+      "assigned_tier": "LARGE",
+      "complexity_score": 0.55,
+      "selected_model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+      "reason": "code_syntax",
+      "latency_ms": 645.08,
+      "passed": true
+    },
+    {
+      "scenario": "mathematical_proof_derivation",
+      "category": "mathematical_reasoning",
+      "prompt": "Derive the mathematical proof for gradient descent convergence on convex functions.",
+      "expected_tier": "LARGE",
+      "assigned_tier": "LARGE",
+      "complexity_score": 0.5,
+      "selected_model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+      "reason": "analytical_reasoning",
+      "latency_ms": 656.91,
+      "passed": true
+    }
+  ]
+}

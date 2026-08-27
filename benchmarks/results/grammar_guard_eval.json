@@ -1,0 +1,62 @@
+{
+  "benchmark": "guided_grammar_guard_m18",
+  "timestamp": "2026-08-27T13:57:05Z",
+  "target_url": "http://localhost:8081",
+  "metrics": {
+    "total_scenarios": 4,
+    "successful_conformance": 4,
+    "conformance_rate_pct": 100.0,
+    "average_latency_ms": 929.53,
+    "zero_parser_failures": true
+  },
+  "scenarios": [
+    {
+      "scenario": "generic_json_object",
+      "description": "Standard response_format: {type: 'json_object'}",
+      "expected_type": "json_object",
+      "resolved_type": "json_object",
+      "guard_status": "VALID",
+      "status_code": 200,
+      "latency_ms": 960.93,
+      "is_valid_json": true,
+      "passed": true,
+      "output_content": "{\n  \"server_metrics\": {\n    \"cpu_percent\": \"45%\",\n    \"memory_mb\": \"750/8192\",\n    \"status\": \"Healthy\"\n  }\n}"
+    },
+    {
+      "scenario": "strict_json_schema_customer",
+      "description": "Strict JSON schema for Customer Profile",
+      "expected_type": "json_schema",
+      "resolved_type": "json_schema",
+      "guard_status": "VALID",
+      "status_code": 200,
+      "latency_ms": 1017.16,
+      "is_valid_json": true,
+      "passed": true,
+      "output_content": "{\n  \"name\": \"Alice Johnson\",\n  \"age\": 32,\n  \"role\": \"Senior Backend Engineer\",\n  \"skills\": [\n    \"Python\",\n    \"Kubernetes\"\n  ]\n}"
+    },
+    {
+      "scenario": "guided_choice_alert_severity",
+      "description": "Guided choice enum constraint (LOW|MEDIUM|HIGH|CRITICAL)",
+      "expected_type": "choice",
+      "resolved_type": "choice",
+      "guard_status": "REPAIRED",
+      "status_code": 200,
+      "latency_ms": 875.16,
+      "is_valid_json": true,
+      "passed": true,
+      "output_content": "CRITICAL"
+    },
+    {
+      "scenario": "guided_regex_tracking_id",
+      "description": "Guided regex constraint for standard tracking IDs ([A-Z]{3}-\\d{4})",
+      "expected_type": "regex",
+      "resolved_type": "regex",
+      "guard_status": "REPAIRED",
+      "status_code": 200,
+      "latency_ms": 864.87,
+      "is_valid_json": true,
+      "passed": true,
+      "output_content": "PRD-8921"
+    }
+  ]
+}

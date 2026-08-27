@@ -104,6 +104,113 @@ class GatewaySettings(BaseSettings):
         gt=0.0,
         le=1.0,
     )
+    lora_routing_enabled: bool = Field(
+        default=True,
+        description="Enable dynamic Multi-LoRA adapter resolution and virtual model synthesis",
+    )
+    lora_default_base_model: str = Field(
+        default="Qwen/Qwen2.5-7B-Instruct-AWQ",
+        description="Default base model used for bare LoRA adapter aliases",
+    )
+    grammar_guard_enabled: bool = Field(
+        default=True,
+        description="Enable guided structured output validation and automatic syntax repair",
+    )
+    grammar_guard_auto_repair: bool = Field(
+        default=True,
+        description="Automatically sanitize markdown fences and syntax errors in structured outputs",
+    )
+    guardrails_enabled: bool = Field(
+        default=True,
+        description="Enable ingress security scanning, prompt injection defense, and PII redaction",
+    )
+    guardrails_injection_defense_enabled: bool = Field(
+        default=True,
+        description="Block adversarial prompt injections, DAN jailbreaks, and delimiter escapes",
+    )
+    guardrails_pii_redaction_enabled: bool = Field(
+        default=True,
+        description="Automatically redact SSNs, credit cards, API keys, and phone numbers in-place",
+    )
+    guardrails_system_prompt_leak_defense: bool = Field(
+        default=True,
+        description="Filter egress completions to prevent system prompt leakage",
+    )
+    cascade_routing_enabled: bool = Field(
+        default=True,
+        description="Enable intelligent complexity evaluation and model tier cascading",
+    )
+    cascade_small_model: str = Field(
+        default="Qwen/Qwen2.5-0.5B-Instruct",
+        description="Small model tier for low-complexity queries (greetings, simple QA, classification)",
+    )
+    cascade_large_model: str = Field(
+        default="Qwen/Qwen2.5-7B-Instruct-AWQ",
+        description="Large model tier for complex reasoning (code, SQL, multi-step math)",
+    )
+    cascade_complexity_threshold: float = Field(
+        default=0.50,
+        description="Complexity score threshold (0.0 to 1.0) above which queries route to the large model tier",
+        gt=0.0,
+        le=1.0,
+    )
+    compressor_enabled: bool = Field(
+        default=True,
+        description="Enable lexical entropy prompt compaction and filler stripping",
+    )
+    compressor_min_tokens: int = Field(
+        default=50,
+        description="Minimum token length required before prompt compaction is triggered",
+        ge=1,
+    )
+    compressor_target_ratio: float = Field(
+        default=0.60,
+        description="Target token compression ratio (0.60 = 40% reduction)",
+        gt=0.1,
+        le=1.0,
+    )
+    compressor_preserve_code_blocks: bool = Field(
+        default=True,
+        description="Ensure code blocks within triple backticks are preserved byte-for-byte",
+    )
+    tool_engine_enabled: bool = Field(
+        default=True,
+        description="Enable native server-side agentic tool execution sandboxes (calculator, sql_runner, python_repl)",
+    )
+    tool_engine_max_iterations: int = Field(
+        default=3,
+        description="Maximum closed-loop agentic tool execution iterations per request",
+        ge=1,
+        le=10,
+    )
+    tool_engine_sandbox_timeout_seconds: float = Field(
+        default=2.0,
+        description="Execution timeout in seconds for sandboxed tools",
+        gt=0.1,
+    )
+    finops_enabled: bool = Field(
+        default=True,
+        description="Enable real-time multi-tenant FinOps cost metering and budget enforcement",
+    )
+    finops_default_budget_usd: float = Field(
+        default=100.0,
+        description="Default budget allocation in USD for newly discovered tenants",
+        ge=0.0,
+    )
+    finops_enforce_budgets: bool = Field(
+        default=True,
+        description="Reject requests with HTTP 402 when tenant spend exceeds budget limit",
+    )
+    finops_prompt_rate_per_1k: float = Field(
+        default=0.00015,
+        description="Dollar cost per 1,000 prompt tokens ($0.15 / 1M)",
+        ge=0.0,
+    )
+    finops_completion_rate_per_1k: float = Field(
+        default=0.00060,
+        description="Dollar cost per 1,000 completion tokens ($0.60 / 1M)",
+        ge=0.0,
+    )
 
 
 # Default singleton instance
