@@ -1,0 +1,186 @@
+{
+  "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+  "target_url": "http://localhost:8000",
+  "timestamp": "2026-08-27T10:07:03Z",
+  "overall_quality_score": 0.9722,
+  "category_scores": {
+    "code": 1.0,
+    "math": 1.0,
+    "qa": 0.875,
+    "constraint": 1.0,
+    "summary": 1.0
+  },
+  "total_prompts": 9,
+  "successful_evaluations": 9,
+  "items": [
+    {
+      "id": "code-fibonacci",
+      "category": "code",
+      "eval_type": "code_syntax",
+      "score": 1.0,
+      "latency_seconds": 3.277,
+      "is_error": false,
+      "completion": "```python\ndef fibonacci(n: int) -> int:\n    if n <= 0:\n        return 0\n    elif n == 1:\n        return 1\n    \n    a, b = 0, 1\n    for _ in range(2, n + 1):\n        a, b = b, a + b\n    return b\n```",
+      "details": {
+        "is_valid_syntax": true,
+        "syntax_error": null,
+        "found_keywords": [
+          "def fibonacci",
+          "return"
+        ],
+        "extracted_code": "def fibonacci(n: int) -> int:\n    if n <= 0:\n        return 0\n    elif n == 1:\n        return 1\n    \n    a, b = 0, 1\n    for _ in range(2, n + 1):\n        a, b = b, a + b\n    return b"
+      }
+    },
+    {
+      "id": "code-binary-search",
+      "category": "code",
+      "eval_type": "code_syntax",
+      "score": 1.0,
+      "latency_seconds": 4.305,
+      "is_error": false,
+      "completion": "```python\ndef binary_search(arr: list, target: int) -> int:\n    left, right = 0, len(arr) - 1\n    \n    while left <= right:\n        mid = (left + right) // 2\n        if arr[mid] == target:\n            return mid\n        elif arr[mid] < target:\n            left = mid + 1\n        else:\n            right = mid - 1\n            \n    return -1\n```",
+      "details": {
+        "is_valid_syntax": true,
+        "syntax_error": null,
+        "found_keywords": [
+          "def binary_search",
+          "while",
+          "return"
+        ],
+        "extracted_code": "def binary_search(arr: list, target: int) -> int:\n    left, right = 0, len(arr) - 1\n    \n    while left <= right:\n        mid = (left + right) // 2\n        if arr[mid] == target:\n            return mi"
+      }
+    },
+    {
+      "id": "math-train-speed",
+      "category": "math",
+      "eval_type": "math_numeric",
+      "score": 1.0,
+      "latency_seconds": 9.4749,
+      "is_error": false,
+      "completion": "To find the train's average speed in miles per hour, we need to divide the total distance traveled by the total time taken.\n\nThe total distance traveled is 120 miles.\n\nThe total time taken is 1 hour and 30 minutes. We need to convert this time into hours. Since there are 60 minutes in an hour, 30 minutes is equal to \\( \\frac{30}{60} = 0.5 \\) hours. Therefore, 1 hour and 30 minutes is equivalent to \\( 1 + 0.5 = 1.5 \\) hours.\n\nNow, we can calculate the average speed:\n\n\\[ \\text{Average Speed} = \\frac{\\text{Total Distance}}{\\text{Total Time}} = \\frac{120 \\text{ miles}}{1.5 \\text{ hours}} \\]\n\n\\[ \\text{Average Speed} = 80 \\text{ mph} \\]\n\nSo, the train's average speed is:\n\nSpeed: 80 mph",
+      "details": {
+        "expected_number": 80.0,
+        "found_match": true,
+        "closest_number": 80.0
+      }
+    },
+    {
+      "id": "math-discount",
+      "category": "math",
+      "eval_type": "math_numeric",
+      "score": 1.0,
+      "latency_seconds": 5.3461,
+      "is_error": false,
+      "completion": "First, we calculate the discounted price after applying the 15% educational discount:\n\n\\[ \\text{Discounted Price} = \\$1200 - (15\\% \\times \\$1200) = \\$1200 - (0.15 \\times \\$1200) = \\$1200 - \\$180 = \\$1020 \\]\n\nNext, we calculate the sales tax on the discounted price:\n\n\\[ \\text{Sales Tax} = 8\\% \\times \\$1020 = 0.08 \\times \\$1020 = \\$81.60 \\]\n\nFinally, we add the sales tax to the discounted price to get the final price:\n\n\\[ \\text{Final Price} = \\$1020 + \\$81.60 = \\$1101.60 \\]\n\nSo, the final answer is:\n\n\\[ \\text{Final Price: } \\$1101.60 \\]",
+      "details": {
+        "expected_number": 1101.6,
+        "found_match": true,
+        "closest_number": 1101.6
+      }
+    },
+    {
+      "id": "qa-paged-attention",
+      "category": "qa",
+      "eval_type": "keywords",
+      "score": 1.0,
+      "latency_seconds": 5.3669,
+      "is_error": false,
+      "completion": "PagedAttention in vLLM is designed to address the issue of GPU memory fragmentation, which can be a significant challenge when working with large language models (LLMs) that require substantial memory resources. Here\u2019s an explanation of how PagedAttention tackles this problem, involving concepts like KV cache, virtual memory, and internal fragmentation:\n\n### 1. **KV Cache**\nIn transformer architectures, the key-value (KV) cache is used to store intermediate results during inference. This cache is crucial for maintaining the state of the model between different tokens in the input sequence. However, managing this cache efficiently on GPUs can be challenging due to memory constraints.\n\n### 2. **Virtual Memory**\nVirtual memory is a technique where the operating system manages the mapping between the logical addresses used by the program and the physical addresses of the memory. In the context of PagedAttention, virtual memory allows the model to access data that is not entirely resident in physical memory. Instead, it can load and unload pages of memory as needed, which helps in managing the overall memory footprint more effectively.\n\n### 3. **Internal Fragmentation**\nInternal fragmentation occurs when there is unused space within allocated blocks of memory. This happens because the memory allocator tries to fit the requested size into the available blocks, often leading",
+      "details": {
+        "expected_keywords": [
+          "kv cache",
+          "fragmentation",
+          "virtual memory",
+          "blocks"
+        ],
+        "found_keywords": [
+          "kv cache",
+          "fragmentation",
+          "virtual memory",
+          "blocks"
+        ],
+        "match_ratio": 1.0
+      }
+    },
+    {
+      "id": "qa-awq-quantization",
+      "category": "qa",
+      "eval_type": "keywords",
+      "score": 0.75,
+      "latency_seconds": 5.3717,
+      "is_error": false,
+      "completion": "Activation-aware Weight Quantization (AWQ) is an advanced technique in neural network quantization that aims to improve the performance of quantized models by considering the activation patterns during training. This approach is superior to naive Round-to-Nearest (RTN) quantization because it takes into account the actual usage and importance of weights based on their impact on the activations.\n\n### Key Differences Between AWQ and Naive RTN Quantization\n\n1. **Naive RTN Quantization:**\n   - In naive RTN quantization, weights are quantized directly to the nearest representable value without considering the context or the impact on the activations.\n   - This can lead to suboptimal performance because some weights might be more critical for certain activation patterns than others.\n\n2. **Activation-aware Weight Quantization (AWQ):**\n   - AWQ quantizes weights based on their contribution to the activations, which means it considers how each weight affects the output of the network.\n   - By focusing on the salient weight channels, AWQ can preserve more of the original model's accuracy while using fewer bits for representation.\n\n### Role of Salient Weight Channels\n\nSalient weight channels refer to those weights that have a significant impact on the activations and thus contribute more to the overall performance",
+      "details": {
+        "expected_keywords": [
+          "salient",
+          "activation",
+          "weights",
+          "outliers"
+        ],
+        "found_keywords": [
+          "salient",
+          "activation",
+          "weights"
+        ],
+        "match_ratio": 0.75
+      }
+    },
+    {
+      "id": "constraint-two-sentences",
+      "category": "constraint",
+      "eval_type": "sentence_count",
+      "score": 1.0,
+      "latency_seconds": 1.3514,
+      "is_error": false,
+      "completion": "An API Gateway acts as a single entry point for managing access to backend services, handling requests to the backend APIs and often performing tasks such as authentication, rate limiting, and protocol translation. It helps in decoupling the frontend applications from the backend services, improving security, and managing the load efficiently.",
+      "details": {
+        "expected_count": 2,
+        "actual_count": 2,
+        "sentences": [
+          "An API Gateway acts as a single entry point for managing access to backend services, handling requests to the backend APIs and often performing tasks such as authentication, rate limiting, and protocol translation",
+          "It helps in decoupling the frontend applications from the backend services, improving security, and managing the load efficiently"
+        ]
+      }
+    },
+    {
+      "id": "constraint-json-format",
+      "category": "constraint",
+      "eval_type": "json_validity",
+      "score": 1.0,
+      "latency_seconds": 0.7788,
+      "is_error": false,
+      "completion": "```json\n{\n  \"framework\": \"vLLM\",\n  \"quantization\": \"AWQ\",\n  \"vram_gb\": 8\n}\n```",
+      "details": {
+        "is_valid_json": true,
+        "parsed_keys": [
+          "framework",
+          "quantization",
+          "vram_gb"
+        ],
+        "found_required_keys": [
+          "framework",
+          "quantization",
+          "vram_gb"
+        ]
+      }
+    },
+    {
+      "id": "summary-continuous-batching",
+      "category": "summary",
+      "eval_type": "bullet_count",
+      "score": 1.0,
+      "latency_seconds": 2.9909,
+      "is_error": false,
+      "completion": "- **Dynamic Batch Sizing:** Iteration-level continuous batching adjusts the batch size dynamically based on the current workload and model performance, which can lead to more efficient use of computational resources compared to fixed batch sizes.\n- **Improved Latency Management:** By continuously batching iterations, the system can better manage latency, ensuring that the model is not overloaded with too much data at once, thus maintaining a steady throughput without significant delays.\n- **Adaptive Resource Allocation:** This approach allows for more adaptive resource allocation, as it can respond quickly to changes in the workload, such as spikes in incoming requests, by adjusting the batch size to optimize both throughput and response time.",
+      "details": {
+        "expected_bullets": 3,
+        "actual_bullets": 3,
+        "bullet_lines": [
+          "- **Dynamic Batch Sizing:** Iteration-level continuous batching adjusts the batch size dynamically based on the current workload and model performance, which can lead to more efficient use of computational resources compared to fixed batch sizes.",
+          "- **Improved Latency Management:** By continuously batching iterations, the system can better manage latency, ensuring that the model is not overloaded with too much data at once, thus maintaining a steady throughput without significant delays.",
+          "- **Adaptive Resource Allocation:** This approach allows for more adaptive resource allocation, as it can respond quickly to changes in the workload, such as spikes in incoming requests, by adjusting the batch size to optimize both throughput and response time."
+        ]
+      }
+    }
+  ]
+}

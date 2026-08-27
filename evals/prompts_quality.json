@@ -1,0 +1,74 @@
+[
+  {
+    "id": "code-fibonacci",
+    "category": "code",
+    "prompt": "Write a Python function `fibonacci(n: int) -> int` that returns the n-th Fibonacci number using iteration. Only return the python code block.",
+    "target_max_tokens": 128,
+    "eval_type": "code_syntax",
+    "expected_keywords": ["def fibonacci", "return"]
+  },
+  {
+    "id": "code-binary-search",
+    "category": "code",
+    "prompt": "Write a Python function `binary_search(arr: list, target: int) -> int` that returns the index of target in sorted arr, or -1 if not found. Return only the code block.",
+    "target_max_tokens": 160,
+    "eval_type": "code_syntax",
+    "expected_keywords": ["def binary_search", "while", "return"]
+  },
+  {
+    "id": "math-train-speed",
+    "category": "math",
+    "prompt": "A train travels 120 miles in 1 hour and 30 minutes. What is the train's average speed in miles per hour? Show calculation and state the final answer clearly as 'Speed: X mph'.",
+    "target_max_tokens": 256,
+    "eval_type": "math_numeric",
+    "expected_number": 80.0
+  },
+  {
+    "id": "math-discount",
+    "category": "math",
+    "prompt": "A server costs $1200. A company receives a 15% educational discount, and then must pay 8% sales tax on the discounted price. What is the final price? State the final answer clearly as 'Final Price: $X'.",
+    "target_max_tokens": 256,
+    "eval_type": "math_numeric",
+    "expected_number": 1101.6
+  },
+  {
+    "id": "qa-paged-attention",
+    "category": "qa",
+    "prompt": "Explain what PagedAttention in vLLM solves regarding GPU memory fragmentation. Mention KV cache, virtual memory, and internal fragmentation.",
+    "target_max_tokens": 256,
+    "eval_type": "keywords",
+    "expected_keywords": ["kv cache", "fragmentation", "virtual memory", "blocks"]
+  },
+  {
+    "id": "qa-awq-quantization",
+    "category": "qa",
+    "prompt": "What makes Activation-aware Weight Quantization (AWQ) superior to naive RTN quantization? Explain the role of salient weight channels.",
+    "target_max_tokens": 256,
+    "eval_type": "keywords",
+    "expected_keywords": ["salient", "activation", "weights", "outliers"]
+  },
+  {
+    "id": "constraint-two-sentences",
+    "category": "constraint",
+    "prompt": "Explain what an API Gateway does in cloud architectures. Your response must consist of EXACTLY two sentences. Do not include any other text.",
+    "target_max_tokens": 96,
+    "eval_type": "sentence_count",
+    "expected_sentence_count": 2
+  },
+  {
+    "id": "constraint-json-format",
+    "category": "constraint",
+    "prompt": "Return a valid JSON object containing the keys: 'framework' with value 'vLLM', 'quantization' with value 'AWQ', and 'vram_gb' with numerical value 8. Return ONLY the valid JSON object.",
+    "target_max_tokens": 96,
+    "eval_type": "json_validity",
+    "required_json_keys": ["framework", "quantization", "vram_gb"]
+  },
+  {
+    "id": "summary-continuous-batching",
+    "category": "summary",
+    "prompt": "Summarize in 3 bullet points why iteration-level continuous batching achieves higher throughput than static batching for LLMs.",
+    "target_max_tokens": 160,
+    "eval_type": "bullet_count",
+    "expected_bullet_count": 3
+  }
+]
