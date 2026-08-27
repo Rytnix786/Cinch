@@ -1,4 +1,4 @@
-"""FastAPI Application for Cinch LLM Gateway with Token Rate Limiting, Priority Scheduling, & Prefix Cache Routing."""
+"""FastAPI Application for Cinch LLM Gateway with Token Limiting, Priority Queues, Prefix Routing, Telemetry & Circuit Breaking."""
 
 from __future__ import annotations
 
@@ -10,14 +10,16 @@ from typing import Any, AsyncGenerator, Dict, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 import httpx
 
 from gateway.auth import get_api_key
 from gateway.cache_router import PrefixCacheRouter, extract_prompt_prefix
+from gateway.circuit_breaker import CircuitBreaker
 from gateway.config import GatewaySettings, get_settings, settings
 from gateway.limiter import enforce_rate_limit, rate_limiter
 from gateway.priority_queue import PriorityRequestQueue, RequestPriority
+from gateway.telemetry import OpenTelemetrySpan, metrics_registry
 from gateway.token_counter import estimate_request_tokens
 
 
@@ -41,6 +43,10 @@ class GatewayState:
         self.cache_router: PrefixCacheRouter = PrefixCacheRouter(
             capacity=settings.cache_router_capacity,
         )
+        self.circuit_breaker: CircuitBreaker = CircuitBreaker(
+            failure_threshold=settings.circuit_failure_threshold,
+            recovery_timeout_seconds=settings.circuit_recovery_timeout_seconds,
+        )
 
 
 gateway_state = GatewayState()
@@ -62,8 +68,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 app = FastAPI(
     title="Cinch LLM Gateway",
-    description="Stateless token rate limiting, priority scheduling, and prefix cache routing for vLLM",
-    version="0.3.0",
+    description="Stateless token rate limiting, priority scheduling, prefix cache routing, circuit breaking, and telemetry for vLLM",
+    version="0.5.0",
     lifespan=lifespan,
 )
 
@@ -85,28 +91,42 @@ def get_client() -> httpx.AsyncClient:
 
 @app.middleware("http")
 async def track_metrics_middleware(request: Request, call_next: Any) -> Response:
-    """Middleware tracking request counts, latencies, and status metrics."""
+    """Middleware tracking request counts, latencies, and Prometheus status metrics."""
     gateway_state.total_requests += 1
     start_time = time.time()
+    endpoint = request.url.path
+    status_code = 200
     try:
         response: Response = await call_next(request)
         elapsed = time.time() - start_time
+        status_code = response.status_code
         gateway_state.recent_latencies.append(elapsed)
+
         if response.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
             gateway_state.rate_limited_requests += 1
         elif response.status_code >= 500:
             gateway_state.error_requests += 1
+
+        metrics_registry.requests_total.inc(labels={"status": str(status_code), "endpoint": endpoint})
+        metrics_registry.request_duration.observe(elapsed, labels={"endpoint": endpoint})
         return response
     except HTTPException as exc:
         elapsed = time.time() - start_time
+        status_code = exc.status_code
         gateway_state.recent_latencies.append(elapsed)
         if exc.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
             gateway_state.rate_limited_requests += 1
         elif exc.status_code >= 500:
             gateway_state.error_requests += 1
+
+        metrics_registry.requests_total.inc(labels={"status": str(status_code), "endpoint": endpoint})
+        metrics_registry.request_duration.observe(elapsed, labels={"endpoint": endpoint})
         raise
     except Exception:
+        elapsed = time.time() - start_time
         gateway_state.error_requests += 1
+        metrics_registry.requests_total.inc(labels={"status": "500", "endpoint": endpoint})
+        metrics_registry.request_duration.observe(elapsed, labels={"endpoint": endpoint})
         raise
 
 
@@ -115,7 +135,7 @@ async def health_check(
     client: httpx.AsyncClient = Depends(get_client),
     current_settings: GatewaySettings = Depends(get_settings),
 ) -> JSONResponse:
-    """Health check validating gateway status and upstream vLLM reachability."""
+    """Health check validating gateway status, circuit breaker, and upstream vLLM reachability."""
     uptime = time.time() - gateway_state.start_time
     vllm_url = f"{current_settings.vllm_base_url.rstrip('/')}/health"
     vllm_status = "unknown"
@@ -125,18 +145,22 @@ async def health_check(
         resp = await client.get(vllm_url, timeout=5.0)
         if resp.status_code == 200:
             vllm_status = "ok"
+            gateway_state.circuit_breaker.record_success()
         else:
             vllm_status = f"unhealthy (status {resp.status_code})"
             is_healthy = False
+            gateway_state.circuit_breaker.record_failure()
     except Exception as e:
         vllm_status = f"unreachable ({type(e).__name__})"
         is_healthy = False
+        gateway_state.circuit_breaker.record_failure()
 
     payload = {
         "status": "healthy" if is_healthy else "degraded",
         "gateway": "ok",
         "vllm": vllm_status,
         "uptime_seconds": round(uptime, 2),
+        "circuit_breaker": gateway_state.circuit_breaker.get_metrics(),
         "queue": gateway_state.priority_queue.get_metrics(),
         "prefix_cache": gateway_state.cache_router.get_metrics(),
     }
@@ -145,25 +169,43 @@ async def health_check(
 
 
 @app.get("/metrics")
-async def metrics() -> Dict[str, Any]:
-    """Observability endpoint returning operational counters and latency statistics."""
+async def metrics(request: Request) -> Response:
+    """Observability endpoint returning Prometheus exposition format or JSON based on Accept header/format param."""
+    accept = request.headers.get("accept", "").lower()
+    format_param = request.query_params.get("format", "").lower()
+
+    if "text/plain" in accept or "prometheus" in accept or format_param == "prometheus":
+        # Standard Prometheus text format
+        q_metrics = gateway_state.priority_queue.get_metrics()
+        metrics_registry.queue_depth.set(q_metrics.get("total_queue_depth", 0), labels={"priority": "all"})
+        metrics_registry.active_gpu_slots.set(q_metrics.get("active_requests", 0))
+
+        text_output = metrics_registry.generate_exposition()
+        return PlainTextResponse(
+            content=text_output,
+            media_type="text/plain; version=0.0.4; charset=utf-8",
+        )
+
+    # Default JSON observability summary
     latencies = list(gateway_state.recent_latencies)
     avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
     uptime = time.time() - gateway_state.start_time
-
-    return {
-        "uptime_seconds": round(uptime, 2),
-        "total_requests": gateway_state.total_requests,
-        "rate_limited_requests": gateway_state.rate_limited_requests,
-        "error_requests": gateway_state.error_requests,
-        "high_priority_requests": gateway_state.high_priority_requests,
-        "low_priority_requests": gateway_state.low_priority_requests,
-        "total_tokens_processed": gateway_state.total_tokens_processed,
-        "average_latency_seconds": round(avg_latency, 4),
-        "sample_count": len(latencies),
-        "queue_metrics": gateway_state.priority_queue.get_metrics(),
-        "prefix_cache_metrics": gateway_state.cache_router.get_metrics(),
-    }
+    return JSONResponse(
+        content={
+            "uptime_seconds": round(uptime, 2),
+            "total_requests": gateway_state.total_requests,
+            "rate_limited_requests": gateway_state.rate_limited_requests,
+            "error_requests": gateway_state.error_requests,
+            "high_priority_requests": gateway_state.high_priority_requests,
+            "low_priority_requests": gateway_state.low_priority_requests,
+            "total_tokens_processed": gateway_state.total_tokens_processed,
+            "average_latency_seconds": round(avg_latency, 4),
+            "sample_count": len(latencies),
+            "circuit_breaker": gateway_state.circuit_breaker.get_metrics(),
+            "queue_metrics": gateway_state.priority_queue.get_metrics(),
+            "prefix_cache_metrics": gateway_state.cache_router.get_metrics(),
+        }
+    )
 
 
 @app.get("/v1/models")
@@ -177,12 +219,17 @@ async def list_models(
     upstream_url = f"{current_settings.vllm_base_url.rstrip('/')}/v1/models"
     try:
         resp = await client.get(upstream_url)
+        if resp.status_code == 200:
+            gateway_state.circuit_breaker.record_success()
+        else:
+            gateway_state.circuit_breaker.record_failure()
         return Response(
             content=resp.content,
             status_code=resp.status_code,
             headers={**rate_headers, "Content-Type": resp.headers.get("content-type", "application/json")},
         )
     except httpx.RequestError as exc:
+        gateway_state.circuit_breaker.record_failure()
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Upstream vLLM error: {exc}",
@@ -196,11 +243,30 @@ async def chat_completions(
     current_settings: GatewaySettings = Depends(get_settings),
     _api_key: Optional[str] = Depends(get_api_key),
     x_priority: Optional[str] = Header(None, alias="X-Priority"),
+    traceparent: Optional[str] = Header(None, alias="traceparent"),
 ) -> Response:
-    """Authenticated, token-budgeted, priority-scheduled, and prefix-cached proxy for chat completions.
+    """Authenticated, rate-limited, priority-scheduled, circuit-broken chat completions proxy."""
+    # Initialize OpenTelemetry Span
+    parent_id = traceparent.split("-")[2] if traceparent and len(traceparent.split("-")) >= 3 else None
+    trace_id = traceparent.split("-")[1] if traceparent and len(traceparent.split("-")) >= 2 else None
+    span = OpenTelemetrySpan("gateway.chat_completions", trace_id=trace_id, parent_span_id=parent_id)
 
-    Supports both regular JSON responses and chunked Server-Sent Events (SSE) streaming.
-    """
+    cb_state = gateway_state.circuit_breaker.state.value
+
+    # 1. Circuit Breaker Fast-Fail Protection
+    if current_settings.circuit_breaker_enabled:
+        cb_allowed, cb_reason, cb_retry_after = gateway_state.circuit_breaker.can_execute()
+        if not cb_allowed:
+            headers = {
+                "X-Circuit-Breaker-State": cb_state,
+                "Retry-After": str(int(cb_retry_after or 10.0)),
+            }
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=cb_reason,
+                headers=headers,
+            )
+
     raw_body = await request.body()
     try:
         body = json.loads(raw_body.decode("utf-8")) if raw_body else {}
@@ -210,7 +276,9 @@ async def chat_completions(
             detail="Malformed JSON request body",
         ) from exc
 
-    # 1. Parse Priority
+    model_name = body.get("model", "unknown")
+
+    # 2. Parse Priority
     raw_prio = (x_priority or body.get("priority", "high")).lower()
     if raw_prio in ("low", "batch", "1"):
         priority = RequestPriority.LOW
@@ -219,10 +287,11 @@ async def chat_completions(
         priority = RequestPriority.HIGH
         gateway_state.high_priority_requests += 1
 
-    # 2. Token Estimation & Rate Limiting
+    # 3. Token Estimation & Rate Limiting
     estimated_tokens = estimate_request_tokens(body)
     request.state.estimated_tokens = estimated_tokens
     gateway_state.total_tokens_processed += estimated_tokens
+    metrics_registry.tokens_total.inc(estimated_tokens, labels={"type": "estimated_total", "model": model_name})
 
     client_ip = request.client.host if request.client else "unknown"
     allowed, rem_rpm, rem_tpm, retry_after, reason = rate_limiter.check(
@@ -242,6 +311,8 @@ async def chat_completions(
         "X-RateLimit-Reset": str(int(time.time() + 60.0)),
         "X-Request-Estimated-Tokens": str(estimated_tokens),
         "X-Request-Priority": "high" if priority == RequestPriority.HIGH else "low",
+        "X-Circuit-Breaker-State": cb_state,
+        "traceparent": span.get_w3c_traceparent(),
     }
 
     if not allowed:
@@ -252,11 +323,8 @@ async def chat_completions(
             headers=rate_headers,
         )
 
-    # 3. Prefix Cache Affinity Routing
+    # 4. Prefix Cache Affinity Routing
     target_backend = current_settings.vllm_base_url
-    cache_status = "BYPASS"
-    prefix_hash = ""
-
     if current_settings.prefix_cache_routing_enabled:
         _, prefix_hash = extract_prompt_prefix(body, min_chars=current_settings.prefix_min_chars)
         if prefix_hash:
@@ -265,11 +333,15 @@ async def chat_completions(
                 default_target=current_settings.vllm_base_url,
             )
             cache_status = "HIT" if is_hit else "MISS"
+            if is_hit:
+                metrics_registry.prefix_cache_hits.inc(labels={"model": model_name})
+            else:
+                metrics_registry.prefix_cache_misses.inc(labels={"model": model_name})
             rate_headers["X-Cache-Prefix-Hash"] = prefix_hash
             rate_headers["X-Cache-Status"] = cache_status
             rate_headers["X-Cache-Hit-Ratio"] = str(gateway_state.cache_router.get_metrics()["hit_ratio"])
 
-    # 4. Schedule via Priority Queue
+    # 5. Schedule via Priority Queue
     try:
         req_id = await gateway_state.priority_queue.acquire(
             priority=priority,
@@ -291,24 +363,34 @@ async def chat_completions(
     # Strip gateway routing directives before forwarding to upstream vLLM
     upstream_body = {k: v for k, v in body.items() if k not in ("priority",)}
 
-    # 5. Proxy to upstream inference backend
+    # 6. Proxy to upstream inference backend
     is_streaming = bool(body.get("stream", False))
     upstream_url = f"{target_backend.rstrip('/')}/v1/chat/completions"
+    t_ingress = time.time()
 
     if is_streaming:
         async def stream_generator() -> AsyncGenerator[bytes, None]:
+            ttft_recorded = False
             try:
                 async with client.stream("POST", upstream_url, json=upstream_body) as upstream_resp:
                     if upstream_resp.status_code != 200:
+                        gateway_state.circuit_breaker.record_failure()
                         error_body = await upstream_resp.aread()
                         yield error_body
                         return
+                    gateway_state.circuit_breaker.record_success()
                     async for chunk in upstream_resp.aiter_bytes():
+                        if not ttft_recorded and len(chunk) > 0:
+                            ttft_val = time.time() - t_ingress
+                            metrics_registry.ttft.observe(ttft_val, labels={"model": model_name})
+                            ttft_recorded = True
                         yield chunk
             except httpx.RequestError as exc:
+                gateway_state.circuit_breaker.record_failure()
                 yield f"data: {{\"error\": \"Upstream connection error: {exc}\"}}\n\n".encode("utf-8")
             finally:
                 await gateway_state.priority_queue.release()
+                span.finish()
 
         return StreamingResponse(
             stream_generator(),
@@ -319,6 +401,10 @@ async def chat_completions(
     # Non-streaming request
     try:
         upstream_resp = await client.post(upstream_url, json=upstream_body)
+        if upstream_resp.status_code == 200:
+            gateway_state.circuit_breaker.record_success()
+        else:
+            gateway_state.circuit_breaker.record_failure()
         return Response(
             content=upstream_resp.content,
             status_code=upstream_resp.status_code,
@@ -328,9 +414,11 @@ async def chat_completions(
             },
         )
     except httpx.RequestError as exc:
+        gateway_state.circuit_breaker.record_failure()
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Upstream vLLM error: {exc}",
         ) from exc
     finally:
         await gateway_state.priority_queue.release()
+        span.finish()

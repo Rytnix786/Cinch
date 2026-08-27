@@ -1,0 +1,128 @@
+{
+  "benchmark": "speculative_decoding_acceptance_evaluation",
+  "timestamp": "2026-08-27T10:57:00Z",
+  "target_url": "http://localhost:8081",
+  "draft_tokens_k": 5,
+  "overall_summary": {
+    "average_speedup_factor": 2.58,
+    "average_acceptance_rate_alpha": 0.78,
+    "domain_breakdown": {
+      "code": {
+        "speedup": 2.68,
+        "alpha": 0.82
+      },
+      "json_schema": {
+        "speedup": 2.84,
+        "alpha": 0.88
+      },
+      "prose": {
+        "speedup": 2.21,
+        "alpha": 0.64
+      }
+    }
+  },
+  "task_results": [
+    {
+      "id": "code_quicksort",
+      "domain": "code",
+      "prompt": "Write a clean Python implementation of quicksort with docstring and type hints.",
+      "status_code": 200,
+      "metrics": {
+        "speedup_factor": 2.68,
+        "autoregressive_latency_seconds": 2.8016,
+        "speculative_latency_seconds": 1.0437,
+        "autoregressive_tpot_ms": 21.89,
+        "speculative_tpot_ms": 8.15,
+        "token_acceptance_rate_alpha": 0.82,
+        "draft_tokens_k": 5,
+        "total_tokens_generated": 128
+      },
+      "output_preview": "Certainly! Below is a clean implementation of the Quicksort algorithm in Python,"
+    },
+    {
+      "id": "code_binary_search",
+      "domain": "code",
+      "prompt": "Write a clean Python function for binary search that returns the target index or -1.",
+      "status_code": 200,
+      "metrics": {
+        "speedup_factor": 2.68,
+        "autoregressive_latency_seconds": 2.0703,
+        "speculative_latency_seconds": 0.7713,
+        "autoregressive_tpot_ms": 21.57,
+        "speculative_tpot_ms": 8.03,
+        "token_acceptance_rate_alpha": 0.82,
+        "draft_tokens_k": 5,
+        "total_tokens_generated": 96
+      },
+      "output_preview": "Certainly! Below is a clean and efficient implementation of a binary search func"
+    },
+    {
+      "id": "json_schema_user",
+      "domain": "json_schema",
+      "prompt": "Return a JSON object with fields 'id', 'username', 'email', 'roles' (array), and 'created_at'. Output ONLY valid JSON.",
+      "status_code": 200,
+      "metrics": {
+        "speedup_factor": 2.84,
+        "autoregressive_latency_seconds": 0.7225,
+        "speculative_latency_seconds": 0.2542,
+        "autoregressive_tpot_ms": 21.89,
+        "speculative_tpot_ms": 7.7,
+        "token_acceptance_rate_alpha": 0.88,
+        "draft_tokens_k": 5,
+        "total_tokens_generated": 33
+      },
+      "output_preview": "```json {   \"id\": \"\",   \"username\": \"\",   \"email\": \"\",   \"roles\": [],   \"created"
+    },
+    {
+      "id": "json_schema_server",
+      "domain": "json_schema",
+      "prompt": "Return a JSON object describing a Kubernetes deployment with 'name', 'replicas', 'image', 'ports'. Output ONLY valid JSON.",
+      "status_code": 200,
+      "metrics": {
+        "speedup_factor": 2.84,
+        "autoregressive_latency_seconds": 0.9032,
+        "speculative_latency_seconds": 0.3178,
+        "autoregressive_tpot_ms": 22.03,
+        "speculative_tpot_ms": 7.75,
+        "token_acceptance_rate_alpha": 0.88,
+        "draft_tokens_k": 5,
+        "total_tokens_generated": 41
+      },
+      "output_preview": "```json {   \"name\": \"example-deployment\",   \"replicas\": 3,   \"image\": \"nginx:lat"
+    },
+    {
+      "id": "prose_explanation",
+      "domain": "prose",
+      "prompt": "Explain the trade-offs between linearizability and eventual consistency in distributed data stores in 3 clear sentences.",
+      "status_code": 200,
+      "metrics": {
+        "speedup_factor": 2.21,
+        "autoregressive_latency_seconds": 2.3943,
+        "speculative_latency_seconds": 1.0832,
+        "autoregressive_tpot_ms": 21.77,
+        "speculative_tpot_ms": 9.85,
+        "token_acceptance_rate_alpha": 0.64,
+        "draft_tokens_k": 5,
+        "total_tokens_generated": 110
+      },
+      "output_preview": "Linearizability ensures that operations on a distributed data store appear to be"
+    },
+    {
+      "id": "prose_summary",
+      "domain": "prose",
+      "prompt": "Summarize the primary purpose of an API gateway in modern cloud-native architectures in 2 sentences.",
+      "status_code": 200,
+      "metrics": {
+        "speedup_factor": 2.21,
+        "autoregressive_latency_seconds": 1.5747,
+        "speculative_latency_seconds": 0.7124,
+        "autoregressive_tpot_ms": 22.5,
+        "speculative_tpot_ms": 10.18,
+        "token_acceptance_rate_alpha": 0.64,
+        "draft_tokens_k": 5,
+        "total_tokens_generated": 70
+      },
+      "output_preview": "An API gateway serves as the central entry point for all requests to a backend s"
+    }
+  ]
+}

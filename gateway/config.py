@@ -70,6 +70,20 @@ class GatewaySettings(BaseSettings):
         description="Minimum character length for prefix extraction and hashing",
         gt=0,
     )
+    circuit_breaker_enabled: bool = Field(
+        default=True,
+        description="Enable automated circuit breaking for upstream fault resilience",
+    )
+    circuit_failure_threshold: int = Field(
+        default=3,
+        description="Number of consecutive failures before tripping circuit breaker to OPEN",
+        gt=0,
+    )
+    circuit_recovery_timeout_seconds: float = Field(
+        default=10.0,
+        description="Cooldown period in seconds before testing recovery in HALF_OPEN state",
+        gt=0.0,
+    )
     request_timeout_seconds: float = Field(
         default=60.0,
         description="Timeout in seconds for upstream vLLM requests",

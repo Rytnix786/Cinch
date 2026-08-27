@@ -1,0 +1,96 @@
+{
+  "benchmark": "prefix_cache_affinity_evaluation",
+  "timestamp": "2026-08-27T10:54:31Z",
+  "target_url": "http://localhost:8081",
+  "iterations_per_suite": 5,
+  "metrics": {
+    "initial_cold_ttft_seconds": 0.8856,
+    "average_warm_ttft_seconds": 0.1818,
+    "average_unique_ttft_seconds": 0.4127,
+    "ttft_speedup_factor": 4.87
+  },
+  "shared_prefix_runs": [
+    {
+      "iteration": 1,
+      "cache_status": "MISS",
+      "prefix_hash": "a5e880641a77d9e2",
+      "ttft_seconds": 0.8856,
+      "total_latency_seconds": 2.2413,
+      "tokens_generated": 33
+    },
+    {
+      "iteration": 2,
+      "cache_status": "MISS",
+      "prefix_hash": "a5e880641a77d9e2",
+      "ttft_seconds": 0.1605,
+      "total_latency_seconds": 1.5733,
+      "tokens_generated": 33
+    },
+    {
+      "iteration": 3,
+      "cache_status": "HIT",
+      "prefix_hash": "a5e880641a77d9e2",
+      "ttft_seconds": 0.1919,
+      "total_latency_seconds": 1.7251,
+      "tokens_generated": 33
+    },
+    {
+      "iteration": 4,
+      "cache_status": "HIT",
+      "prefix_hash": "a5e880641a77d9e2",
+      "ttft_seconds": 0.1342,
+      "total_latency_seconds": 1.4838,
+      "tokens_generated": 33
+    },
+    {
+      "iteration": 5,
+      "cache_status": "HIT",
+      "prefix_hash": "a5e880641a77d9e2",
+      "ttft_seconds": 0.2405,
+      "total_latency_seconds": 1.7736,
+      "tokens_generated": 33
+    }
+  ],
+  "unique_prefix_runs": [
+    {
+      "iteration": 1,
+      "cache_status": "MISS",
+      "prefix_hash": "165c1dc56cdd2f6c",
+      "ttft_seconds": 0.8561,
+      "total_latency_seconds": 2.261,
+      "tokens_generated": 33
+    },
+    {
+      "iteration": 2,
+      "cache_status": "MISS",
+      "prefix_hash": "a8cb69af2fb18f54",
+      "ttft_seconds": 0.8876,
+      "total_latency_seconds": 1.8282,
+      "tokens_generated": 33
+    },
+    {
+      "iteration": 3,
+      "cache_status": "MISS",
+      "prefix_hash": "cff1bcf6c25e60f4",
+      "ttft_seconds": 0.1093,
+      "total_latency_seconds": 0.8028,
+      "tokens_generated": 33
+    },
+    {
+      "iteration": 4,
+      "cache_status": "MISS",
+      "prefix_hash": "194702d4291353db",
+      "ttft_seconds": 0.105,
+      "total_latency_seconds": 0.7959,
+      "tokens_generated": 33
+    },
+    {
+      "iteration": 5,
+      "cache_status": "MISS",
+      "prefix_hash": "24c988b25a5b3079",
+      "ttft_seconds": 0.1055,
+      "total_latency_seconds": 0.7798,
+      "tokens_generated": 33
+    }
+  ]
+}

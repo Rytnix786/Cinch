@@ -1,0 +1,112 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "Inference Request Throughput (RPS)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum(rate(cinch_requests_total[1m])) by (status)",
+          "legendFormat": "HTTP {{status}}"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "id": 2,
+      "title": "Token Throughput (Tokens/sec)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum(rate(cinch_tokens_total[1m])) by (type)",
+          "legendFormat": "{{type}}"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "id": 3,
+      "title": "Prefix Cache Hit Ratio (%)",
+      "type": "gauge",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "(sum(rate(cinch_prefix_cache_hits_total[1m])) / (sum(rate(cinch_prefix_cache_hits_total[1m])) + sum(rate(cinch_prefix_cache_misses_total[1m])))) * 100",
+          "legendFormat": "Hit Ratio"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 4,
+      "title": "Time-To-First-Token (TTFT) Latency Percentiles",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.50, sum(rate(cinch_time_to_first_token_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p50 TTFT"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, sum(rate(cinch_time_to_first_token_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p95 TTFT"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.99, sum(rate(cinch_time_to_first_token_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p99 TTFT"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 5,
+      "title": "Priority Queue Depth & Active GPU Slots",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "cinch_queue_depth",
+          "legendFormat": "Queued Requests"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "cinch_active_gpu_slots",
+          "legendFormat": "Active GPU Slots"
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["cinch", "llm-serving", "vllm", "kubernetes"],
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": ["5s", "10s", "30s", "1m"]
+  },
+  "timezone": "browser",
+  "title": "Cinch LLM Platform — Enterprise Observability",
+  "version": 1
+}

@@ -1,0 +1,51 @@
+{
+  "suite": "cinch_phase2_enterprise_validation",
+  "timestamp": "2026-08-27T11:06:52Z",
+  "overall_status": "ALL_PASSED",
+  "modules_evaluated": 6,
+  "results": {
+    "module_1_token_priority": {
+      "status": "passed",
+      "status_code": 200,
+      "tpm_limit": "50000",
+      "estimated_tokens": "13",
+      "priority": "high"
+    },
+    "module_2_prefix_caching": {
+      "status": "passed",
+      "prefix_hash": "eadddd129a757173",
+      "cache_status": "MISS",
+      "hit_ratio": "0.0"
+    },
+    "module_3_speculative_decoding": {
+      "status": "passed",
+      "speedup_factor": 2.58,
+      "acceptance_rate_alpha": 0.78,
+      "draft_k": 5
+    },
+    "module_4_observability": {
+      "status": "passed",
+      "prometheus_status": 200,
+      "contains_cinch_metrics": true,
+      "w3c_traceparent_injected": true
+    },
+    "module_5_circuit_breaker": {
+      "status": "passed",
+      "circuit_state": "closed",
+      "failure_threshold": 3,
+      "cooldown_seconds": 10.0
+    },
+    "module_6_awq_pipeline": {
+      "status": "passed",
+      "quant_config": {
+        "zero_point": true,
+        "q_group_size": 128,
+        "w_bit": 4,
+        "version": "GEMM",
+        "modules_to_not_convert": null
+      },
+      "compression_ratio": 3.88,
+      "vram_saved_gb": 10.69
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "benchmark": "circuit_breaker_chaos_resilience",
+  "timestamp": "2026-08-27T11:04:36Z",
+  "target_url": "http://localhost:8081",
+  "metrics": {
+    "average_fast_fail_latency_ms": 45.56,
+    "unmitigated_timeout_ms": 30000.0,
+    "protection_speedup_factor": 658.4,
+    "mean_time_to_recover_seconds": 10.85,
+    "trip_threshold_failures": 3,
+    "cooldown_period_seconds": 10.0,
+    "recovery_canary_status": 200,
+    "final_circuit_state": "closed"
+  },
+  "fast_fail_samples_ms": [
+    47.95,
+    44.06,
+    43.85,
+    43.81,
+    48.26,
+    43.92,
+    43.93,
+    44.01,
+    48.06,
+    47.79
+  ]
+}

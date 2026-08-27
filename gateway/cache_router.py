@@ -84,8 +84,12 @@ class PrefixCacheRouter:
             return entry["target_url"], True
 
         # Cache MISS: New prefix -> Consistent hashing across available targets
-        target_idx = int(prefix_hash, 16) % len(targets)
+        try:
+            target_idx = int(prefix_hash, 16) % len(targets)
+        except ValueError:
+            target_idx = abs(hash(prefix_hash)) % len(targets)
         selected_target = targets[target_idx]
+
 
         # Enforce LRU capacity limit
         if len(self._cache) >= self.capacity:
