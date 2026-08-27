@@ -1,0 +1,93 @@
+{
+  "benchmark": "production_shadow_traffic_replayer_m24",
+  "timestamp": "2026-08-27T16:03:19Z",
+  "target_url": "http://localhost:8081",
+  "metrics": {
+    "total_scenarios": 4,
+    "passed_scenarios": 4,
+    "accuracy_pct": 100.0,
+    "primary_latency_penalty_ms": 0.0,
+    "shadow_metrics": {
+      "enabled": true,
+      "shadow_backend_url": "http://host.k3d.internal:8000",
+      "sample_rate": 1.0,
+      "total_sampled_requests": 1,
+      "successful_replays": 1,
+      "failed_replays": 0,
+      "divergences_detected": 1,
+      "divergence_rate_pct": 100.0,
+      "average_latency_delta_ms": -0.1,
+      "retained_traces_count": 1
+    }
+  },
+  "scenarios": [
+    {
+      "scenario": "general_knowledge_factoid",
+      "prompt": "What are the primary architectural layers of a modern microservices system?",
+      "status_code": 200,
+      "latency_ms": 1021.06,
+      "shadow_sampled": true,
+      "passed": true
+    },
+    {
+      "scenario": "technical_python_architecture",
+      "prompt": "Explain how Python's Global Interpreter Lock (GIL) impacts CPU-bound multithreading.",
+      "status_code": 200,
+      "latency_ms": 1022.01,
+      "shadow_sampled": true,
+      "passed": true
+    },
+    {
+      "scenario": "forced_shadow_header",
+      "prompt": "List three distinct benefits of speculative decoding in large language model inference.",
+      "status_code": 200,
+      "latency_ms": 1017.34,
+      "shadow_sampled": true,
+      "passed": true
+    },
+    {
+      "scenario": "unsampled_request_bypass",
+      "prompt": "What is the capital of Australia?",
+      "status_code": 200,
+      "latency_ms": 1005.3,
+      "shadow_sampled": false,
+      "passed": true
+    }
+  ],
+  "recent_traces": [
+    {
+      "trace_id": "trace_1787846595903_943",
+      "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+      "prompt_preview": "List three distinct benefits of speculative decoding in larg...",
+      "prod_status": 200,
+      "shadow_status": 200,
+      "prod_latency_ms": 1012.6,
+      "shadow_latency_ms": 1003.72,
+      "latency_delta_ms": -8.88,
+      "prod_tokens": 45,
+      "shadow_tokens": 45,
+      "token_count_ratio": 1.0,
+      "lexical_similarity_score": 0.735,
+      "divergence_detected": false,
+      "shadow_error": null,
+      "timestamp": "2026-08-27T16:03:16Z"
+    },
+    {
+      "trace_id": "trace_1787846593864_659",
+      "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+      "prompt_preview": "What are the primary architectural layers of a modern micros...",
+      "prod_status": 200,
+      "shadow_status": 200,
+      "prod_latency_ms": 973.35,
+      "shadow_latency_ms": 1019.34,
+      "latency_delta_ms": 45.99,
+      "prod_tokens": 45,
+      "shadow_tokens": 45,
+      "token_count_ratio": 1.0,
+      "lexical_similarity_score": 0.819,
+      "divergence_detected": false,
+      "shadow_error": null,
+      "timestamp": "2026-08-27T16:03:14Z"
+    }
+  ]
+}

@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import asyncio
 import collections
 import contextlib
 import json
+import os
 import time
 from typing import Any, AsyncGenerator, Dict, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 import httpx
 
 from gateway.auth import get_api_key
@@ -26,6 +29,7 @@ from gateway.limiter import enforce_rate_limit, rate_limiter
 from gateway.lora_router import LoRARouter
 from gateway.priority_queue import PriorityRequestQueue, RequestPriority
 from gateway.semantic_cache import SemanticCache
+from gateway.shadow_replayer import ShadowTrafficReplayer
 from gateway.telemetry import OpenTelemetrySpan, metrics_registry
 from gateway.token_counter import estimate_request_tokens
 from gateway.tool_engine import ToolEngine
@@ -97,6 +101,12 @@ class GatewayState:
             prompt_rate_per_1k=settings.finops_prompt_rate_per_1k,
             completion_rate_per_1k=settings.finops_completion_rate_per_1k,
         )
+        self.shadow_replayer: ShadowTrafficReplayer = ShadowTrafficReplayer(
+            enabled=settings.shadow_replayer_enabled,
+            shadow_backend_url=settings.shadow_backend_url,
+            sample_rate=settings.shadow_sample_rate,
+            max_traces=settings.shadow_max_traces,
+        )
 
 
 gateway_state = GatewayState()
@@ -130,6 +140,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount interactive WebUI serving console assets
+ui_path = "ui" if os.path.isdir("ui") else ("/app/ui" if os.path.isdir("/app/ui") else None)
+if ui_path:
+    app.mount("/ui", StaticFiles(directory=ui_path, html=True), name="ui")
+
+
+@app.get("/console")
+async def console_redirect() -> RedirectResponse:
+    """Redirect /console to /ui/ interactive serving console."""
+    return RedirectResponse(url="/ui/")
 
 
 def get_client() -> httpx.AsyncClient:
@@ -221,6 +242,7 @@ async def health_check(
         "compressor": gateway_state.compressor.get_metrics(),
         "tool_engine": gateway_state.tool_engine.get_metrics(),
         "finops": gateway_state.finops.get_metrics(),
+        "shadow_replayer": gateway_state.shadow_replayer.get_metrics(),
     }
     status_code = status.HTTP_200_OK if is_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
     return JSONResponse(content=payload, status_code=status_code)
@@ -330,6 +352,7 @@ async def chat_completions(
     x_server_tools: Optional[str] = Header(None, alias="X-Server-Tool-Execution"),
     x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
     x_team_id: Optional[str] = Header(None, alias="X-Team-ID"),
+    x_shadow_replay: Optional[str] = Header(None, alias="X-Shadow-Replay"),
     traceparent: Optional[str] = Header(None, alias="traceparent"),
 ) -> Response:
     """Authenticated, rate-limited, priority-scheduled, circuit-broken chat completions proxy."""
@@ -489,6 +512,7 @@ async def chat_completions(
         "X-FinOps-Request-Cost-USD": "0.000000",
         "X-FinOps-Tenant-Spend-USD": "0.000000",
         "X-FinOps-Budget-Remaining-USD": "100.000000",
+        "X-Shadow-Replay-Sampled": "true" if gateway_state.shadow_replayer.should_sample(x_shadow_replay) else "false",
         "traceparent": span.get_w3c_traceparent(),
     }
 
@@ -614,6 +638,24 @@ async def chat_completions(
 
         if upstream_resp.status_code == 200:
             gateway_state.circuit_breaker.record_success()
+
+            # Asynchronous Shadow Traffic Replay Trigger
+            if rate_headers.get("X-Shadow-Replay-Sampled") == "true":
+                try:
+                    prod_resp_obj = json.loads(content_bytes.decode("utf-8"))
+                except Exception:
+                    prod_resp_obj = {}
+                prod_lat_ms = (time.time() - t_ingress) * 1000.0
+                asyncio.create_task(
+                    gateway_state.shadow_replayer.replay_shadow(
+                        client=client,
+                        request_body=body,
+                        prod_resp_json=prod_resp_obj,
+                        prod_latency_ms=prod_lat_ms,
+                        prod_status=upstream_resp.status_code,
+                        api_key=_api_key,
+                    )
+                )
 
             # Server-Side Agentic Tool Execution Loop
             server_tools_active = current_settings.tool_engine_enabled and (
@@ -773,3 +815,60 @@ async def set_tenant_budget(
     budget_limit = float(body.get("budget_limit_usd", 100.0))
     tenant_record = gateway_state.finops.set_budget(tenant_id, budget_limit)
     return JSONResponse(content=tenant_record.to_dict(), status_code=status.HTTP_200_OK)
+
+
+@app.get("/v1/shadow/metrics")
+async def get_shadow_metrics(
+    _api_key: Optional[str] = Depends(get_api_key),
+) -> JSONResponse:
+    """Authenticated endpoint returning shadow traffic summary metrics and divergence statistics."""
+    metrics_data = gateway_state.shadow_replayer.get_metrics()
+    return JSONResponse(content=metrics_data, status_code=status.HTTP_200_OK)
+
+
+@app.get("/v1/shadow/traces")
+async def get_shadow_traces(
+    limit: int = 50,
+    _api_key: Optional[str] = Depends(get_api_key),
+) -> JSONResponse:
+    """Authenticated endpoint returning recent shadow comparison traces."""
+    traces = gateway_state.shadow_replayer.get_traces(limit=limit)
+    return JSONResponse(content={"traces": traces, "count": len(traces)}, status_code=status.HTTP_200_OK)
+
+
+@app.post("/v1/shadow/config")
+async def update_shadow_config(
+    request: Request,
+    _api_key: Optional[str] = Depends(get_api_key),
+) -> JSONResponse:
+    """Authenticated endpoint dynamically configuring shadow replayer sampling and target URL."""
+    body = await request.json()
+    cfg = gateway_state.shadow_replayer.set_config(
+        sample_rate=body.get("sample_rate"),
+        shadow_backend_url=body.get("shadow_backend_url"),
+        enabled=body.get("enabled"),
+    )
+    return JSONResponse(content=cfg, status_code=status.HTTP_200_OK)
+
+
+@app.get("/v1/console/state")
+async def get_console_state(
+    _api_key: Optional[str] = Depends(get_api_key),
+) -> JSONResponse:
+    """Consolidated real-time serving console state for WebUI dashboards."""
+    return JSONResponse(
+        content={
+            "status": "healthy",
+            "uptime_seconds": round(time.time() - gateway_state.start_time, 2),
+            "total_requests": gateway_state.total_requests,
+            "queue": gateway_state.priority_queue.get_metrics(),
+            "prefix_cache": gateway_state.cache_router.get_metrics(),
+            "semantic_cache": gateway_state.semantic_cache.get_metrics(),
+            "finops": gateway_state.finops.get_metrics(),
+            "shadow_replayer": gateway_state.shadow_replayer.get_metrics(),
+            "guardrails": gateway_state.guardrails.get_metrics(),
+            "tool_engine": gateway_state.tool_engine.get_metrics(),
+            "compressor": gateway_state.compressor.get_metrics(),
+        },
+        status_code=status.HTTP_200_OK,
+    )

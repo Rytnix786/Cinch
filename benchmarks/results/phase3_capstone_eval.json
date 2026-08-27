@@ -1,0 +1,75 @@
+{
+  "benchmark": "phase3_capstone_master_evaluation",
+  "timestamp": "2026-08-27T16:09:31Z",
+  "target_url": "http://localhost:8081",
+  "metrics": {
+    "total_capabilities": 10,
+    "passed_capabilities": 10,
+    "conformance_rate_pct": 100.0
+  },
+  "capabilities": [
+    {
+      "milestone": "M16",
+      "name": "Semantic Vector Caching",
+      "cold_latency_ms": 15.17,
+      "cache_latency_ms": 43.72,
+      "cache_status": "HIT",
+      "passed": true
+    },
+    {
+      "milestone": "M17",
+      "name": "Multi-LoRA Dynamic Multiplexing",
+      "adapter_resolved": "sql-copilot",
+      "passed": true
+    },
+    {
+      "milestone": "M18",
+      "name": "Guided JSON Grammar Guard",
+      "grammar_status": "VALID",
+      "passed": true
+    },
+    {
+      "milestone": "M19",
+      "name": "Ingress Security & PII Defense",
+      "injection_status_code": 400,
+      "passed": true
+    },
+    {
+      "milestone": "M20",
+      "name": "Smart Model Cascading",
+      "resolved_tier": "LARGE",
+      "passed": true
+    },
+    {
+      "milestone": "M21",
+      "name": "Context & Prompt Compaction",
+      "compaction_ratio": 1.0,
+      "passed": true
+    },
+    {
+      "milestone": "M22",
+      "name": "Agentic Tool Sandbox Execution",
+      "status_code": 200,
+      "passed": true
+    },
+    {
+      "milestone": "M23",
+      "name": "Multi-Tenant FinOps Cost Metering",
+      "total_spend_usd": 0.000183,
+      "passed": true
+    },
+    {
+      "milestone": "M24",
+      "name": "Production Shadow Traffic Replayer",
+      "status_code": 200,
+      "passed": true
+    },
+    {
+      "milestone": "M25",
+      "name": "Interactive Real-Time Serving Console",
+      "ui_status": 200,
+      "state_status": 200,
+      "passed": true
+    }
+  ]
+}

@@ -211,6 +211,26 @@ class GatewaySettings(BaseSettings):
         description="Dollar cost per 1,000 completion tokens ($0.60 / 1M)",
         ge=0.0,
     )
+    shadow_replayer_enabled: bool = Field(
+        default=True,
+        description="Enable asynchronous background shadow traffic replication for regression detection",
+    )
+    shadow_backend_url: str = Field(
+        default="http://host.k3d.internal:8000",
+        description="Target candidate backend URL for mirrored shadow traffic",
+    )
+    shadow_sample_rate: float = Field(
+        default=0.10,
+        description="Sampling probability (0.0 to 1.0) of production traffic to duplicate to shadow backend",
+        ge=0.0,
+        le=1.0,
+    )
+    shadow_max_traces: int = Field(
+        default=100,
+        description="Maximum shadow comparison trace records to retain in memory",
+        ge=10,
+        le=1000,
+    )
 
 
 # Default singleton instance

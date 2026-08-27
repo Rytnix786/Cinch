@@ -1,0 +1,55 @@
+{
+  "benchmark": "interactive_serving_console_m25",
+  "timestamp": "2026-08-27T16:06:36Z",
+  "target_url": "http://localhost:8081",
+  "metrics": {
+    "all_assets_passed": true,
+    "average_asset_latency_ms": 3.64,
+    "streaming_ttft_ms": 159.22,
+    "total_stream_duration_ms": 971.66,
+    "tokens_streamed": 41,
+    "tokens_per_second": 50.5
+  },
+  "asset_benchmarks": [
+    {
+      "name": "UI HTML Shell",
+      "path": "/ui/",
+      "status_code": 200,
+      "avg_latency_ms": 6.73,
+      "min_latency_ms": 2.63,
+      "passed": true
+    },
+    {
+      "name": "UI Style CSS",
+      "path": "/ui/style.css",
+      "status_code": 200,
+      "avg_latency_ms": 2.53,
+      "min_latency_ms": 2.37,
+      "passed": true
+    },
+    {
+      "name": "UI Engine JS",
+      "path": "/ui/app.js",
+      "status_code": 200,
+      "avg_latency_ms": 2.43,
+      "min_latency_ms": 2.28,
+      "passed": true
+    },
+    {
+      "name": "Console Redirect",
+      "path": "/console",
+      "status_code": 200,
+      "avg_latency_ms": 4.13,
+      "min_latency_ms": 3.94,
+      "passed": true
+    },
+    {
+      "name": "Console State API",
+      "path": "/v1/console/state",
+      "status_code": 200,
+      "avg_latency_ms": 2.37,
+      "min_latency_ms": 2.14,
+      "passed": true
+    }
+  ]
+}

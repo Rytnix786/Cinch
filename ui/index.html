@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cinch — Real-Time Inference Console</title>
+  <link rel="stylesheet" href="/ui/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header -->
+  <header class="navbar">
+    <div class="brand">
+      <span class="brand-logo">⚡</span>
+      <span class="brand-title">CINCH</span>
+      <span class="brand-subtitle">Serving Console</span>
+    </div>
+
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-tab="playground">Playground</button>
+      <button class="nav-tab" data-tab="cache">KV-Cache & Memory</button>
+      <button class="nav-tab" data-tab="finops">FinOps & Cost</button>
+      <button class="nav-tab" data-tab="guardrails">Security & Audit</button>
+      <button class="nav-tab" data-tab="shadow">Shadow & Tools</button>
+    </div>
+
+    <div class="cluster-status">
+      <span class="status-indicator live" id="cluster-indicator"></span>
+      <span class="status-text" id="cluster-status-text">k3d Cluster: 2 Pods Live</span>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-content">
+    
+    <!-- Tab 1: Playground -->
+    <section class="tab-pane active" id="pane-playground">
+      <div class="playground-layout">
+        
+        <!-- Left Panel: Parameters -->
+        <div class="panel-left">
+          <div class="panel-header">
+            <h3>Inference Controls</h3>
+            <button class="btn-secondary" id="btn-reset-params">Reset</button>
+          </div>
+
+          <div class="form-group">
+            <label for="model-select">Target Model</label>
+            <select id="model-select" class="form-control">
+              <option value="Qwen/Qwen2.5-7B-Instruct-AWQ">Qwen2.5-7B-Instruct-AWQ (Primary)</option>
+              <option value="Qwen/Qwen2.5-0.5B-Instruct">Qwen2.5-0.5B-Instruct (Small Tier)</option>
+              <option value="auto">auto (Smart Cascade Classifier)</option>
+              <option value="Qwen/Qwen2.5-7B-Instruct-AWQ:sql-copilot">Qwen2.5-7B + SQL-Copilot (LoRA)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="tenant-input">Tenant / Team ID</label>
+            <div class="input-row">
+              <input type="text" id="tenant-input" class="form-control" value="data-science" placeholder="Tenant ID">
+              <input type="text" id="team-input" class="form-control" value="analytics" placeholder="Team ID">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="sys-prompt">System Prompt</label>
+            <textarea id="sys-prompt" class="form-control" rows="2" placeholder="You are a helpful, expert AI assistant.">You are a precise technical AI assistant.</textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="user-prompt">User Prompt</label>
+            <textarea id="user-prompt" class="form-control" rows="4" placeholder="Enter your prompt here...">What are the mathematical differences between Radix prefix caching and standard KV-cache reuse in vLLM?</textarea>
+          </div>
+
+          <div class="sliders-grid">
+            <div class="form-group">
+              <div class="slider-label"><span>Max Tokens</span><span id="val-max-tokens">128</span></div>
+              <input type="range" id="slider-max-tokens" min="16" max="512" step="16" value="128">
+            </div>
+            <div class="form-group">
+              <div class="slider-label"><span>Temperature</span><span id="val-temp">0.7</span></div>
+              <input type="range" id="slider-temp" min="0.0" max="1.0" step="0.05" value="0.7">
+            </div>
+          </div>
+
+          <div class="toggles-grid">
+            <label class="toggle-control">
+              <input type="checkbox" id="toggle-stream" checked>
+              <span class="toggle-slider"></span>
+              <span>SSE Streaming</span>
+            </label>
+            <label class="toggle-control">
+              <input type="checkbox" id="toggle-compaction" checked>
+              <span class="toggle-slider"></span>
+              <span>Prompt Compaction</span>
+            </label>
+            <label class="toggle-control">
+              <input type="checkbox" id="toggle-guardrails" checked>
+              <span class="toggle-slider"></span>
+              <span>Ingress Guardrails</span>
+            </label>
+            <label class="toggle-control">
+              <input type="checkbox" id="toggle-tools" checked>
+              <span class="toggle-slider"></span>
+              <span>Server-Side Tools</span>
+            </label>
+          </div>
+
+          <button class="btn-primary" id="btn-dispatch">
+            <span class="btn-icon">▶</span> Dispatch Inference
+          </button>
+        </div>
+
+        <!-- Right Panel: Live Output & Waterfall -->
+        <div class="panel-right">
+          
+          <!-- Telemetry Bar -->
+          <div class="telemetry-bar">
+            <div class="stat-box">
+              <span class="stat-label">TTFT</span>
+              <span class="stat-value" id="stat-ttft">— ms</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">Generation Speed</span>
+              <span class="stat-value" id="stat-tps">— tok/s</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">Total Latency</span>
+              <span class="stat-value" id="stat-latency">— ms</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">Tokens</span>
+              <span class="stat-value" id="stat-tokens">0 / 0</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">Request Cost</span>
+              <span class="stat-value" id="stat-cost">$0.000000</span>
+            </div>
+          </div>
+
+          <!-- Live Output Window -->
+          <div class="output-container">
+            <div class="output-header">
+              <span>Response Stream</span>
+              <span class="badge" id="badge-cache-status">CACHE: MISS</span>
+            </div>
+            <div class="output-body" id="stream-output">
+              <span class="placeholder-text">Click "Dispatch Inference" to stream response tokens in real time...</span>
+            </div>
+          </div>
+
+          <!-- Response Headers Inspector -->
+          <div class="headers-container">
+            <div class="headers-header">
+              <span>Gateway Response Headers</span>
+            </div>
+            <div class="headers-body" id="headers-output">
+              <div class="header-row"><span class="hdr-key">X-Request-ID:</span><span class="hdr-val">—</span></div>
+              <div class="header-row"><span class="hdr-key">X-Cascade-Routing-Tier:</span><span class="hdr-val">—</span></div>
+              <div class="header-row"><span class="hdr-key">X-Prompt-Compaction-Ratio:</span><span class="hdr-val">—</span></div>
+              <div class="header-row"><span class="hdr-key">X-FinOps-Budget-Remaining-USD:</span><span class="hdr-val">—</span></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 2: KV-Cache & Memory -->
+    <section class="tab-pane" id="pane-cache">
+      <div class="dashboard-grid">
+        <div class="card card-wide">
+          <div class="card-header">
+            <h3>KV-Cache Radix Block Allocation Heatmap</h3>
+            <span class="badge badge-success" id="cache-hit-ratio-badge">Hit Ratio: 85.0%</span>
+          </div>
+          <div class="card-body">
+            <div class="memory-grid" id="memory-block-grid">
+              <!-- 64 dynamic memory blocks populated via JS -->
+            </div>
+            <div class="legend-row">
+              <span class="legend-item"><span class="dot dot-free"></span> Free Page</span>
+              <span class="legend-item"><span class="dot dot-prefix"></span> Shared Prefix Cache</span>
+              <span class="legend-item"><span class="dot dot-active"></span> Active Context Generation</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3>Semantic Vector Cache</h3></div>
+          <div class="card-body stat-list">
+            <div class="stat-line"><span>Cache Capacity:</span><strong id="sem-cap">5,000 queries</strong></div>
+            <div class="stat-line"><span>Similarity Threshold:</span><strong>0.95 (Cosine)</strong></div>
+            <div class="stat-line"><span>Sub-5ms Zero-GPU Hits:</span><strong id="sem-hits">142 hits</strong></div>
+            <div class="stat-line"><span>GPU Energy Saved:</span><strong>1.42 kWh</strong></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3>Prefix Radix Affinity</h3></div>
+          <div class="card-body stat-list">
+            <div class="stat-line"><span>Registered Tree Nodes:</span><strong id="radix-nodes">86 nodes</strong></div>
+            <div class="stat-line"><span>Shared Prefix Length:</span><strong>64 tokens avg</strong></div>
+            <div class="stat-line"><span>Affinity Routing Mode:</span><strong>Consistent Hash Ring</strong></div>
+            <div class="stat-line"><span>Cluster Pod Target:</span><strong>host.k3d.internal:8000</strong></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 3: FinOps & Cost -->
+    <section class="tab-pane" id="pane-finops">
+      <div class="dashboard-grid">
+        <div class="card">
+          <div class="card-header"><h3>Platform Total Spend</h3></div>
+          <div class="card-body">
+            <div class="metric-huge" id="finops-total-spend">$0.000261</div>
+            <div class="metric-sub">Across <span id="finops-tenant-count">3</span> active engineering teams</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3>Budget Enforcement</h3></div>
+          <div class="card-body stat-list">
+            <div class="stat-line"><span>Policy Status:</span><strong class="text-success">ACTIVE (Hard 402 Cutoff)</strong></div>
+            <div class="stat-line"><span>Prompt Token Rate:</span><strong>$0.15 / 1M tokens</strong></div>
+            <div class="stat-line"><span>Completion Token Rate:</span><strong>$0.60 / 1M tokens</strong></div>
+            <div class="stat-line"><span>Blocked Over-Budget Reqs:</span><strong class="text-warning" id="finops-blocked">1</strong></div>
+          </div>
+        </div>
+
+        <div class="card card-full">
+          <div class="card-header">
+            <h3>Multi-Tenant Usage Ledger</h3>
+            <button class="btn-secondary" id="btn-refresh-finops">Refresh Ledger</button>
+          </div>
+          <div class="card-body">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Tenant ID</th>
+                  <th>Team</th>
+                  <th>Budget Limit</th>
+                  <th>Total Spend</th>
+                  <th>Remaining</th>
+                  <th>Utilization</th>
+                  <th>Requests</th>
+                </tr>
+              </thead>
+              <tbody id="tenant-table-body">
+                <tr><td colspan="7">Loading tenant usage ledger...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 4: Security & Guardrails -->
+    <section class="tab-pane" id="pane-guardrails">
+      <div class="dashboard-grid">
+        <div class="card card-wide">
+          <div class="card-header">
+            <h3>Real-Time Security & Ingress Guardrail Stream</h3>
+            <span class="badge badge-success">Scanner Active (&lt; 1ms CPU)</span>
+          </div>
+          <div class="card-body">
+            <div class="log-stream" id="security-log-stream">
+              <div class="log-entry log-info"><span class="log-time">[20:00:01]</span> Security scanner initialized. Sub-millisecond CPU heuristic inspection active.</div>
+              <div class="log-entry log-pass"><span class="log-time">[20:00:15]</span> Request [a5875bf3] verified clean: 0 injections, 0 PII entities.</div>
+              <div class="log-entry log-warn"><span class="log-time">[20:00:22]</span> Ingress PII redacted: [REDACTED_SSN] replaced in-place before vLLM dispatch.</div>
+              <div class="log-entry log-fail"><span class="log-time">[20:00:30]</span> Adversarial DAN jailbreak blocked with HTTP 400 Bad Request.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3>Active Defense Policies</h3></div>
+          <div class="card-body stat-list">
+            <div class="stat-line"><span>Prompt Injections:</span><strong class="text-success">BLOCKED</strong></div>
+            <div class="stat-line"><span>DAN Jailbreaks:</span><strong class="text-success">BLOCKED</strong></div>
+            <div class="stat-line"><span>PII Masking:</span><strong class="text-success">SSN, Phone, CC, Keys</strong></div>
+            <div class="stat-line"><span>System Prompt Leak:</span><strong class="text-success">STRIPPED</strong></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 5: Shadow & Tools -->
+    <section class="tab-pane" id="pane-shadow">
+      <div class="dashboard-grid">
+        <div class="card card-full">
+          <div class="card-header">
+            <h3>Production vs. Shadow Model Trace Inspector</h3>
+            <button class="btn-secondary" id="btn-refresh-shadow">Refresh Traces</button>
+          </div>
+          <div class="card-body">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Trace ID</th>
+                  <th>Prompt Preview</th>
+                  <th>Prod Latency</th>
+                  <th>Shadow Latency</th>
+                  <th>Delta (ms)</th>
+                  <th>Lexical Similarity</th>
+                  <th>Divergence</th>
+                </tr>
+              </thead>
+              <tbody id="shadow-table-body">
+                <tr><td colspan="7">Loading shadow comparison traces...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/ui/app.js"></script>
+</body>
+</html>

@@ -11,8 +11,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements-dev.txt /app/
 RUN pip install --no-cache-dir -r requirements-dev.txt
 
-# Copy gateway application
+# Copy gateway application & WebUI console assets
 COPY gateway/ /app/gateway/
+COPY ui/ /app/ui/
 
 ENV PYTHONPATH=/app
 ENV GATEWAY_HOST=0.0.0.0
