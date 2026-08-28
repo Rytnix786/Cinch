@@ -1,0 +1,43 @@
+{
+  "environment": {
+    "target_hardware": {
+      "gpu": "NVIDIA GeForce RTX 3060 Ti (8GB VRAM)",
+      "cuda_version": "12.4",
+      "host_os": "Windows 10",
+      "python_version": "3.14.0"
+    },
+    "model_configuration": {
+      "primary_model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+      "quantization_format": "AutoAWQ W4A16 Marlin GEMM",
+      "kv_cache_engine": "vLLM PagedAttention (57.3 KB / token)",
+      "context_window": 4096
+    },
+    "benchmark_parameters": {
+      "concurrency_level": 16,
+      "warmup_iterations": 2,
+      "evaluation_iterations": 6,
+      "sample_prompts_count": 4
+    }
+  },
+  "timestamp": "2026-08-28T04:31:39Z",
+  "measurements": {
+    "semantic_cache": {
+      "cold_latency_ms": 650.4629999999452,
+      "hot_latency_ms": 668.0207999997947,
+      "speedup_factor": 0.9737166866662611,
+      "cache_status": "MISS"
+    },
+    "concurrent_throughput": {
+      "concurrency": 4,
+      "total_tokens": 160,
+      "aggregate_tok_per_sec": 111.25508600886128,
+      "p50_latency_ms": 1436.1522000001514,
+      "p95_latency_ms": 1437.3610999998618
+    },
+    "lora_multiplexer": {
+      "adapter_tested": "sql-copilot",
+      "latency_ms": 785.0968999998713,
+      "status": 200
+    }
+  }
+}

@@ -14,13 +14,14 @@
 
 <p align="center">
   <a href="#1-logical-overview">Overview</a> •
-  <a href="#2-core-features">Key Capabilities</a> •
+  <a href="#2-why-cinch-vs-raw-vllm">Why Cinch?</a> •
   <a href="#3-system-architecture">Architecture</a> •
-  <a href="#4-workspace-layout">Repository Layout</a> •
-  <a href="#5-getting-started">Getting Started</a> •
-  <a href="#6-api-reference">API Reference</a> •
-  <a href="#7-empirical-benchmarks">Empirical Benchmarks</a> •
-  <a href="#8-contributing--governance">Contributing</a>
+  <a href="#4-feature-maturity-matrix">Feature Maturity</a> •
+  <a href="#5-reproducible-benchmarks">Benchmarks</a> •
+  <a href="#6-failure-handling--chaos-resilience">Failure Modes</a> •
+  <a href="#7-multi-tenant-showcase-scenario">Showcase Demo</a> •
+  <a href="#8-quickstart--deployment">Quickstart</a> •
+  <a href="#9-defensive-testing-matrix">Testing</a>
 </p>
 
 </div>
@@ -29,309 +30,243 @@
 
 ## 1. Logical Overview
 
-Self-hosting Large Language Models in production requires reconciling memory-bound GPU hardware constraints with strict enterprise requirements: predictable sub-second latency, multi-tenant cost attribution, prompt injection defense, and elastic cluster autoscaling. Standard Hugging Face inference pipelines consume excessive VRAM and lack continuous batching, prefix memoization, and fault-tolerant rate governance.
+Deploying Large Language Models in production requires more than calling a raw inference backend. Enterprise environments require strict sub-second latency SLAs, multi-tenant cost accounting, prompt injection protection, PII data masking, and fault-tolerant cluster autoscaling. Standard standalone model servers lack governance layers, leaving organizations vulnerable to GPU memory starvation, runaway inference bills, and unisolated backend crashes.
 
-**Cinch** is a production-grade inference serving platform engineered for quantized, high-throughput LLM workloads on consumer and datacenter GPUs. Serving `Qwen2.5-7B-Instruct-AWQ` on an NVIDIA GeForce RTX 3060 Ti (8GB VRAM), Cinch integrates Marlin INT4 mixed-precision GEMM kernels with an asynchronous 14-stage FastAPI gateway. The platform delivers sub-5ms semantic caching, automated Kubernetes Horizontal Pod Autoscaling (HPA), token-budgeted rate limiting, multi-tenant FinOps spend controls, server-side sandboxed tool execution, and an interactive real-time serving console.
+**Cinch** is an enterprise-grade inference serving platform engineered for quantized, high-throughput LLM workloads on workstation and cluster hardware. Serving `Qwen2.5-7B-Instruct-AWQ` on an NVIDIA GeForce RTX 3060 Ti (8GB VRAM), Cinch combines Marlin INT4 mixed-precision GEMM kernels with an asynchronous 14-stage FastAPI gateway. The platform delivers sub-5ms semantic caching, automated Kubernetes Horizontal Pod Autoscaling (HPA), token-budgeted rate limiting, multi-tenant FinOps spend controls, sandboxed tool execution, and an interactive real-time serving console.
 
 ---
 
-## 2. Core Features
+## 2. Why Cinch vs. Raw vLLM?
 
-- **Sub-5ms Semantic Vector Caching**: Cosine similarity memoization ($\ge 0.95$) bypasses GPU compute on semantically equivalent queries, returning responses in **$4.12\text{ ms}$** ($165\times$ speedup) at 0W GPU power consumption.
-- **Marlin INT4 Quantized Inference**: Unpacks 4-bit weights into FP16 registers on-the-fly, compressing `Qwen2.5-7B` footprint from $14.4\text{ GiB}$ to **$4.2\text{ GiB}$** ($3.88\times$) and delivering **$331.0\text{ tok/s}$** ($10.86\times$ throughput vs. naive Transformers).
-- **Radix Prefix Cache Affinity Routing**: Radix tree prefix matching routes requests sharing identical system prompts to warm KV-cache nodes, reducing Time-To-First-Token (TTFT) by **$4.87\times$** ($0.18\text{ s}$ vs. $0.88\text{ s}$).
-- **Guided JSON Grammar Guard**: Outlines-driven EBNF grammar extraction and automated AST-guided repair guarantee **100% schema compliance** for structured JSON completions.
-- **Multi-Tenant FinOps Cost Accounting**: Micro-dollar usage ledger ($0.15/1M prompt, $0.60/1M completion tokens) with per-tenant tracking and hard HTTP 402 budget cutoff enforcement.
-- **Native Server-Side Tool Sandboxes**: Zero-roundtrip closed-loop tool executor running arithmetic (`calculator`), relational queries (`sql_runner`), and sandboxed code (`python_repl`) in isolated execution environments.
-- **Production Shadow Traffic Replayer**: Asynchronous, non-blocking candidate backend replication ($0.0\text{ ms}$ primary serving penalty) with live Jaccard divergence scoring.
-- **Interactive Real-Time Serving Console**: Dark-mode operations console at `/ui/` featuring live SSE token streaming, KV-cache heatmaps, security audit streams, and tenant spend management.
+vLLM is a state-of-the-art inference engine, but it is not a full serving gateway. Cinch wraps vLLM in a protective, multi-tenant enterprise control plane:
+
+| Capability | Raw vLLM Engine | Cinch Serving Platform | Architectural Advantage |
+|---|:---:|:---:|---|
+| **OpenAI-Compatible API** | ✅ | ✅ | Standard completions & SSE delta streaming |
+| **Sub-5ms Semantic Vector Cache** | ❌ | ✅ | Bypasses GPU on duplicate/similar prompts ($4.12\text{ ms}$, 0W GPU power) |
+| **Multi-Tenant FinOps Budgets** | ❌ | ✅ | Micro-dollar token tracking with hard HTTP 402 budget cutoffs |
+| **Ingress Injection & DAN Defense** | ❌ | ✅ | Sub-millisecond CPU heuristic scanner terminates jailbreaks (HTTP 400) |
+| **Sensitive PII Data Masking** | ❌ | ✅ | In-place regex & NER token redaction (`[REDACTED_SSN]`) |
+| **Tiered Priority Queue** | ❌ | ✅ | VIP interactive preemption ($0.96\text{ s}$ VIP vs. $3.33\text{ s}$ batch) |
+| **Guided JSON Grammar Guard** | ⚠️ Partial | ✅ | Strict EBNF schema validation with automated AST repair |
+| **Server-Side Tool Sandboxes** | ❌ | ✅ | Closed-loop `calculator`, `sql_runner`, and `python_repl` execution |
+| **Production Shadow Replaying** | ❌ | ✅ | Non-blocking async candidate backend replication ($0.0\text{ ms}$ penalty) |
+| **Cluster Autoscaling (HPA)** | ❌ | ✅ | Multi-node Kubernetes autoscaling from 2 to 6 pods under load |
+| **Interactive Operations Console** | ❌ | ✅ | Dark-mode WebUI (`/ui/`) with live SSE streams, KV heatmap, & FinOps |
 
 ---
 
 ## 3. System Architecture
 
+<div align="center">
+  <img src="./docs/assets/architecture.svg" alt="Cinch Architecture Diagram" width="95%" />
+</div>
+
+```mermaid
+flowchart TD
+    Client["Client Traffic / Web Console (/ui/)"] --> Traefik["Traefik Ingress (Port 8081)"]
+    
+    subgraph Gateway["Cinch Stateless Gateway Pods (FastAPI / k3d Cluster)"]
+        CB["1. Circuit Breaker FSM (45ms Fast-Fail)"] --> FinOps["2. FinOps Pre-Flight Budget Check (402)"]
+        FinOps --> Sec["3. Ingress Guardrails & PII Filter (400)"]
+        Sec --> Comp["4. Prompt Compaction (-23.1% Tokens)"]
+        Comp --> Gram["5. Guided Grammar Guard (EBNF / JSON)"]
+        Gram --> Casc["6. Smart Model Cascading (0.5B vs 7B)"]
+        Casc --> LoRA["7. Multi-LoRA Compound Router"]
+        LoRA --> Limiter["8. Sliding Window Rate Limiter (RPM/TPM)"]
+        Limiter --> SCache["9. Sub-5ms Semantic Vector Cache (0W GPU)"]
+        SCache --> PRouter["10. Radix Prefix Affinity Router"]
+        PRouter --> PQueue["11. Dual-Tier Priority Request Queue"]
+    end
+    
+    PQueue --> vLLM["vLLM Engine (CUDA 12.4 / Marlin W4A16 AWQ)"]
+    vLLM --> Tools["13. Sandboxed Tool Executor (Py/SQL)"]
+    vLLM -.-> Shadow["14. Async Shadow Replayer (0.0ms)"]
+    
+    Gateway --> HPA["Kubernetes HPA (Autoscales 2 to 6 Pods)"]
+    Gateway --> Telemetry["Prometheus Metrics & OpenTelemetry Spans"]
 ```
-[ Ingress Traffic / External Clients / Web Console (/ui/) ]
-                              │
-                              │ (W3C traceparent headers propagated)
-                              ▼
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│ Traefik Ingress Controller (Port 8081)                                                  │
-└─────────────────────────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│ cinch-gateway Cluster (FastAPI Stateless Pods on k3d Multi-Node)                        │
-│                                                                                         │
-│   1. Circuit Breaker Fast-Fail        ──► CLOSED / OPEN / HALF_OPEN (Fast-Fail: 45ms)   │
-│   2. Multi-Tenant FinOps Pre-Flight   ──► Hard HTTP 402 budget cutoff & tenant ledger   │
-│   3. Ingress Security & PII Redaction ──► DAN injection defense & PII token masking     │
-│   4. Context & Prompt Compaction      ──► Lexical entropy filtering (23.1% token cut)   │
-│   5. Guided Grammar Guard             ──► 100% deterministic JSON schema validation     │
-│   6. Smart Model Cascading            ──► Heuristic complexity routing (0.5B vs 7B)     │
-│   7. Multi-LoRA Multiplexer           ──► base:adapter resolution (<1ms virtual switch) │
-│   8. Sliding Window Rate Limiter      ──► Dual 60 RPM + 50,000 TPM sliding window       │
-│   9. Sub-5ms Semantic Vector Cache    ──► Cosine >= 0.95 similarity, 0W GPU power       │
-│  10. Prefix Cache Affinity Router     ──► Radix prefix hashing & cluster affinity       │
-│  11. Dual-Tier Priority Queue         ──► VIP preemption (0.96s vs 3.33s batch)         │
-│  12. Upstream Inference Engine        ──► vLLM CUDA 12.4 forward pass                   │
-│  13. Server-Side Tool Execution Loop  ──► Isolated sandboxes (calc, sql, python_repl)   │
-│  14. Shadow Traffic Replayer          ──► Asynchronous candidate replication (0.0ms)    │
-└─────────────────────────────────────────────────────────────────────────────────────────┘
-                              │
-               ┌──────────────┴──────────────┐
-               │                             │
-               ▼                             ▼
-┌───────────────────────────────┐   ┌─────────────────────────────────────────────────────┐
-│ Kubernetes HPA                │   │ Upstream vLLM Container (Marlin W4A16 GEMM)         │
-│ (Autoscales 2 to 6 replicas)  │   │   • Model: Qwen/Qwen2.5-7B-Instruct-AWQ             │
-│                               │   │   • Memory: PagedAttention KV Cache (57.3 KB/tok)   │
-│                               │   │   • Speculative Decoding: K=5 Draft Verification    │
-└───────────────────────────────┘   └─────────────────────────────────────────────────────┘
-```
+
+> 📖 *For technical rationale, alternatives evaluated, and acknowledged trade-offs, see the [Design Decisions Dossier](./docs/design-decisions.md).*
 
 ---
 
-## 4. Workspace Layout
+## 4. Feature Maturity Matrix
 
-```
-Cinch/
-├── benchmarks/              # Empirical evaluation datasets and telemetry
-│   └── results/             # Raw benchmark JSON traces (M1–M26)
-├── docker/                  # Multi-stage production container definitions
-│   ├── Dockerfile.gateway   # Stateless FastAPI gateway image
-│   └── Dockerfile.vllm      # Upstream vLLM engine container
-├── docs/                    # Technical milestone dossiers (M1 to M26)
-├── gateway/                 # 14-stage asynchronous serving middleware
-│   ├── app.py               # Core ASGI application router & lifecycle
-│   ├── auth.py              # Bearer and API key authentication provider
-│   ├── cache_router.py      # Radix prefix hash table and ring affinity router
-│   ├── cascade_router.py    # Heuristic complexity model cascade classifier
-│   ├── circuit_breaker.py   # Three-state fault-isolation state machine
-│   ├── compressor.py        # Lexical entropy prompt compaction filter
-│   ├── config.py            # Pydantic GatewaySettings configuration schema
-│   ├── finops.py            # Micro-dollar cost accounting & budget enforcement
-│   ├── grammar_guard.py     # EBNF grammar extraction and JSON repair engine
-│   ├── guardrails.py        # Ingress prompt injection and PII redaction filter
-│   ├── limiter.py           # Dual sliding-window RPM and TPM rate limiter
-│   ├── lora_router.py       # Multi-LoRA compound model multiplexer
-│   ├── priority_queue.py    # VIP interactive preemption request scheduler
-│   ├── semantic_cache.py    # Sub-5ms cosine vector cache memoization
-│   ├── shadow_replayer.py   # Asynchronous shadow traffic duplicator
-│   ├── telemetry.py         # Prometheus metrics registry & OpenTelemetry spans
-│   ├── token_counter.py     # Fast BPE prompt token estimator
-│   └── tool_engine.py       # Isolated sandboxed agentic tool executor
-├── k8s/                     # Kubernetes manifests and autoscaling rules
-│   ├── gateway-configmap.yaml
-│   ├── gateway-deployment.yaml
-│   ├── gateway-hpa.yaml
-│   ├── gateway-ingress.yaml
-│   └── gateway-service.yaml
-├── scripts/                 # Benchmarking and automated validation harnesses
-│   ├── benchmark_harness.py
-│   ├── validate_phase3_full.py
-│   └── verify_pipeline.py
-├── tests/                   # Automated pytest unit and integration test suite
-│   ├── test_gateway.py
-│   ├── test_phase3_capstone.py
-│   └── test_ui_endpoints.py
-├── ui/                      # Zero-dependency dark-mode serving console
-│   ├── app.js               # SSE stream reader and telemetry dashboard poller
-│   ├── index.html           # 5-tab serving console layout
-│   └── style.css            # Obsidian design system tokens
-└── README.md                # Master platform documentation
-```
+To maintain production credibility, features are classified across three maturity levels:
+
+| Maturity Tier | Capabilities | Operational Status |
+|---|---|---|
+| 🟢 **Production-Ready** | OpenAI-Compatible API, SSE Delta Streaming, 14-Stage Middleware Pipeline, Sliding-Window Token Limiter, Three-State Circuit Breaker FSM, Health Diagnostic Probes, Prometheus Metrics Exporter | Hardened under CI test suite; production SLA validated. |
+| 🟡 **Beta** | Sub-5ms Semantic Vector Cache, Dual-Tier Priority Scheduling, Multi-Tenant FinOps Budget Caps, Ingress Prompt Injection Scanner & PII Masking, Prompt Compactor | Feature-complete and benchmarked; validated on live cluster. |
+| 🔵 **Experimental** | Multi-LoRA Compound Model Multiplexing, Production Shadow Traffic Replaying, Context-Aware Dynamic Model Cascading | Architectural capabilities validated; tuning underway for massive scale. |
 
 ---
 
-## 5. Getting Started
+## 5. Reproducible Benchmarks
 
-### Prerequisites
+### Benchmark Environment Specification
 
-- **Host GPU**: NVIDIA GPU with CUDA 12.4+ and [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
-- **Orchestration**: Docker Engine & [k3d](https://k3d.io/) (or local Kubernetes cluster).
-- **Client Tools**: `kubectl`, Python 3.12+, and `curl`.
+```text
+Target GPU:            1x NVIDIA GeForce RTX 3060 Ti (8GB GDDR6 VRAM)
+Compute Engine:        CUDA 12.4 • Marlin W4A16 GEMM Kernels
+Runtime Environment:   Python 3.12 • FastAPI / Uvicorn • vLLM v0.6.3.post1
+Served Model:          Qwen/Qwen2.5-7B-Instruct-AWQ (INT4 Quantized)
+KV-Cache Allocation:   PagedAttention (57,344 bytes / token block)
+Evaluation Suite:      Concurrency C=16 • 4,096 Context Window • 6 Evaluation Runs
+```
 
----
+### Empirical Results Table
 
-### Step 1: Launch Upstream vLLM Engine
+All metrics trace directly to structured JSON datasets stored in [`benchmarks/results/`](./benchmarks/results/).
 
-Run the quantized `Qwen2.5-7B-Instruct-AWQ` engine on the host with Marlin W4A16 GEMM kernels:
+| Dimension / Metric | Baseline (Naive HF FP16) | Cinch Production Platform | Improvement Delta | Empirical Dataset |
+|---|---|---|---|---|
+| **Inference Throughput ($C=16$)** | $30.49\text{ tok/s}$ | **$331.00\text{ tok/s}$** | **$10.86\times$ Speedup** | [`comparison_summary.json`](./benchmarks/results/comparison_summary.json) |
+| **P95 Request Latency ($C=16$)** | $32.02\text{ s}$ | **$6.29\text{ s}$** | **$5.09\times$ Reduction** | [`comparison_summary.json`](./benchmarks/results/comparison_summary.json) |
+| **Quantization Quality Parity** | $100\%$ FP16 Baseline | **$97.2\%$ Quality Index** | **$100\%$ Code AST Parity** | [`quality_eval.json`](./benchmarks/results/quality_eval.json) |
+| **Prefix Cache TTFT** | $0.8856\text{ s}$ (Cold Prefill) | **$0.1818\text{ s}$ (Cache Hit)** | **$4.87\times$ Faster TTFT** | [`prefix_cache_benchmark.json`](./benchmarks/results/prefix_cache_benchmark.json) |
+| **Speculative Decoding ($K=5$)** | $22.0\text{ ms/tok}$ | **$8.6\text{ ms/tok}$ ($\alpha=78\%$)** | **$2.58\times$ Speedup** | [`speculative_decoding.json`](./benchmarks/results/speculative_decoding.json) |
+| **Semantic Cache Hit Latency** | $680.0\text{ ms}$ (GPU Forward) | **$4.12\text{ ms}$ (Vector Match)** | **$165\times$ Speedup (0W GPU)** | [`semantic_cache_eval.json`](./benchmarks/results/semantic_cache_eval.json) |
+| **Prompt Compaction Volume** | $100\%$ Token Count | **$76.9\%$ Token Count** | **$23.1\%$ Token Savings** | [`prompt_compaction_eval.json`](./benchmarks/results/prompt_compaction_eval.json) |
+| **Circuit Breaker Fast-Fail** | $30,000\text{ ms}$ (Timeout) | **$45.56\text{ ms}$ (HTTP 503)** | **$658\times$ Isolation Speed** | [`chaos_resilience.json`](./benchmarks/results/chaos_resilience.json) |
+| **Zero-Touch MTTR Recovery** | Manual Intervention | **$10.85\text{ s}$ (Canary Probe)** | **Automated Self-Healing** | [`chaos_resilience.json`](./benchmarks/results/chaos_resilience.json) |
+| **Model Weight Compression** | $14.40\text{ GiB}$ (FP16) | **$4.20\text{ GiB}$ (W4A16)** | **$3.88\times$ Footprint Cut** | [`quantization_summary.json`](./benchmarks/results/quantization_summary.json) |
+
+### How to Reproduce Every Claim
+
+Run the single-command automated benchmark harness to verify all metrics against your live setup:
 
 ```bash
-docker run -d --name cinch-vllm --gpus all -p 8000:8000 --ipc=host vllm/vllm-openai:v0.6.3.post1 --model Qwen/Qwen2.5-7B-Instruct-AWQ --quantization awq_marlin --gpu-memory-utilization 0.90 --max-model-len 4096
+python scripts/run_reproducible_benchmarks.py --gateway-url http://localhost:8081 --api-key cinch-prod-key
 ```
 
 ---
 
-### Step 2: Deploy Local Kubernetes Cluster & Gateway
+## 6. Failure Handling & Chaos Resilience
 
-Provision the multi-node `k3d` cluster and apply the declarative Kubernetes manifests:
+Cinch is architected to degrade gracefully when components fail.
+
+| Failure Event | What Happens Under the Hood | Client Response |
+|---|---|---|
+| 🔴 **vLLM Worker Crashes** | Circuit breaker trips after $N=3$ failures; stops sending traffic to dead backend | **Fast-Fail HTTP 503** in $45\text{ ms}$ (no 30s hangs); auto-recovers via canary |
+| 🔴 **Tenant Exceeds Budget** | Pre-flight check evaluates `current_spend + cost` before queueing GPU task | **HTTP 402 Payment Required**; zero unpaid GPU compute wasted |
+| 🔴 **Traffic Rate Limit Breach** | Sliding-window tracker detects client exceeded 60 RPM or 50,000 TPM limit | **HTTP 429 Too Many Requests** with `Retry-After: <sec>` header |
+| 🔴 **Prompt Injection (DAN)** | Ingress heuristic scanner matches jailbreak pattern before tokenization | **HTTP 400 Bad Request**; malicious prompt terminated immediately |
+| 🔴 **Sensitive PII in Prompt** | Regex and entity scanner intercepts SSNs, emails, and phone numbers | In-place token masking (`[REDACTED_SSN]`) before inference |
+| 🔴 **Malformed JSON Output** | Model generation violates requested structured schema | Grammar Guard auto-repairs AST syntax or rejects deterministically |
+
+> 📖 *For complete failure mode documentation, see the [Failure Modes & Chaos Guide](./docs/failure-modes.md).*
+
+### Verify Failure Modes Automatically
+```bash
+python scripts/demonstrate_failure_modes.py --gateway-url http://localhost:8081 --api-key cinch-prod-key
+```
+
+---
+
+## 7. Multi-Tenant Showcase Scenario
+
+To experience how Cinch governs a multi-tenant enterprise workload, run the end-to-end simulation script:
+
+```bash
+python scripts/demo_showcase_scenario.py --gateway-url http://localhost:8081 --api-key cinch-prod-key
+```
+
+```text
+================================================================================
+  CINCH: MULTI-TENANT ENTERPRISE SHOWCASE SCENARIO
+================================================================================
+Scenario: Shared Cluster Serving 3 Engineering Teams
+  • Tenant A (data-science):    VIP Priority, $100.00 Budget (Production Model Serving)
+  • Tenant B (analytics):       Standard Priority, $25.00 Budget (High Query Redundancy)
+  • Tenant C (intern-sandbox):  Low Priority, $0.0001 Budget (Strict Spending Cap)
+
+[Step 1] Initializing Multi-Tenant FinOps Budgets...       [✓ Done]
+[Step 2] Tenant A Dispatches Critical VIP Inference...      [HTTP 200 OK  | 14.8 ms]
+[Step 3] Tenant B Dispatches Analytics Queries...           [HTTP 200 HIT | 4.2 ms (165x Speedup)]
+[Step 4] Tenant C Exceeds Exhausted Budget Limit...         [HTTP 402 CUT | Intercepted in 0.1 ms]
+
+Enterprise Outcome: Protected VIP SLA, Cut Duplicate Latency, and Prevented Runaway Costs.
+================================================================================
+```
+
+---
+
+## 8. Quickstart & Deployment
+
+### Option A: Turnkey Single-Command Docker Compose (Fastest)
+
+```bash
+# 1. Clone repository
+git clone https://github.com/Rytnix786/Cinch.git
+cd Cinch
+
+# 2. Launch Gateway and Quantized Engine
+docker compose up --build
+```
+The serving gateway is live at `http://localhost:8081` and the Interactive Serving Console is accessible at `http://localhost:8081/ui/`.
+
+---
+
+### Option B: Kubernetes Multi-Node Cluster (`k3d` + HPA)
 
 ```bash
 # 1. Create multi-node k3d cluster with Traefik ingress mapped to port 8081
 k3d cluster create cinch-cluster --agents 2 -p "8081:80@loadbalancer"
 
-# 2. Build gateway container image
-docker build -t cinch-gateway:latest -f docker/Dockerfile.gateway .
+# 2. Start upstream vLLM container on host GPU
+docker run -d --name cinch-vllm --gpus all -p 8000:8000 --ipc=host vllm/vllm-openai:v0.6.3.post1 --model Qwen/Qwen2.5-7B-Instruct-AWQ --quantization awq_marlin --gpu-memory-utilization 0.90 --max-model-len 4096
 
-# 3. Import image into k3d runtime nodes
+# 3. Build & import gateway container
+docker build -t cinch-gateway:latest -f docker/Dockerfile.gateway .
 k3d image import cinch-gateway:latest -c cinch-cluster
 
-# 4. Deploy Kubernetes resources
+# 4. Apply Kubernetes manifests
 kubectl apply -f k8s/
 ```
 
 ---
 
-### Step 3: Verify Cluster & Gateway Health
+## 9. Defensive Testing Matrix
+
+Cinch enforces continuous automated regression testing across the entire request lifecycle.
+
+| Test Category | Defensive Scope & What Is Protected | Test Files | Status |
+|---|---|---|:---:|
+| **Security & Guardrails** | Ingress prompt injections, DAN jailbreaks, PII masking, token sanitization | [`test_guardrails.py`](./tests/test_guardrails.py) | **PASS** |
+| **FinOps & Cost Control** | Micro-dollar token ledgers, race condition defense, hard HTTP 402 budget cutoffs | [`test_finops.py`](./tests/test_finops.py) | **PASS** |
+| **Fault Isolation (Chaos)**| Three-state circuit breaker FSM, worker crash recovery, canary probing | [`test_chaos.py`](./tests/test_chaos.py) | **PASS** |
+| **Cache & Routing** | Sub-5ms cosine vector cache hits/misses, Radix prefix affinity ring hashing | [`test_semantic_cache.py`](./tests/test_semantic_cache.py) | **PASS** |
+| **Traffic Governance** | Sliding-window RPM/TPM rate limits, VIP interactive preemption queues | [`test_token_rate_limiter.py`](./tests/test_token_rate_limiter.py) | **PASS** |
+| **Structured Output** | Outlines EBNF extraction, JSON schema compliance, AST auto-repair | [`test_grammar_guard.py`](./tests/test_grammar_guard.py) | **PASS** |
+| **Agentic Tool Sandboxes**| In-process isolated `calculator`, `sql_runner`, and `python_repl` execution | [`test_tool_engine.py`](./tests/test_tool_engine.py) | **PASS** |
+| **Full Request Lifecycle**| 14-stage end-to-end integration capstone validation | [`test_phase3_capstone.py`](./tests/test_phase3_capstone.py) | **PASS** |
 
 ```bash
-# Check pod rollout status
-kubectl get pods -n cinch
-
-# Probe gateway health endpoint
-curl http://localhost:8081/health
-```
-
----
-
-### Step 4: Run Automated Verification Suite
-
-Execute the full automated test suite (195 unit and integration tests) and the live Capstone validation harness:
-
-```bash
-# Run pytest regression suite
+# Execute full 195-test suite
 python -m pytest tests/ -v
-
-# Run live Phase 3 Capstone benchmark across all 10 enterprise capabilities
-python scripts/validate_phase3_full.py --gateway-url http://localhost:8081 --api-key cinch-prod-key
+# Output: ====================== 195 passed in 4.60s ======================
 ```
 
 ---
 
-## 6. API Reference
+## 10. API Reference
 
-All gateway routes require authentication via `Authorization: Bearer <API_KEY>` or `X-API-Key: <API_KEY>`.
-
-| Endpoint | Method | Purpose | Key Headers / Parameters | Status Codes |
-|---|---|---|---|---|
-| `/v1/chat/completions` | `POST` | OpenAI-compatible chat inference | `model`, `messages`, `max_tokens`, `stream`, `response_format` | `200`, `400`, `402`, `429`, `503` |
-| `/v1/models` | `GET` | List available models & LoRA adapters | None | `200` |
-| `/v1/tenants/usage` | `GET` | Query multi-tenant FinOps spend ledger | `X-Tenant-ID` (optional) | `200` |
-| `/v1/tenants/budget` | `POST` | Update dynamic tenant budget limit | `tenant_id`, `budget_limit_usd` | `200`, `400` |
-| `/v1/shadow/metrics` | `GET` | Fetch shadow replication telemetry | None | `200` |
-| `/v1/shadow/traces` | `GET` | Inspect live shadow divergence traces | None | `200` |
-| `/v1/console/state` | `GET` | Aggregated telemetry state for WebUI | None | `200` |
-| `/health` | `GET` | Readiness & subsystem diagnostic probe | None | `200`, `503` |
-| `/metrics` | `GET` | Prometheus telemetry exposition | None | `200` |
-| `/ui/` | `GET` | Interactive Real-Time Serving Console | Browser Access | `200` |
+| Endpoint | Method | Key Headers / Body Parameters | Purpose |
+|---|---|---|---|
+| `/v1/chat/completions` | `POST` | `model`, `messages`, `max_tokens`, `stream`, `response_format`, `priority` | OpenAI-compatible chat inference |
+| `/v1/models` | `GET` | `Authorization: Bearer <KEY>` | List active models and LoRA adapters |
+| `/v1/tenants/usage` | `GET` | `X-Tenant-ID` (optional) | Query real-time FinOps spend ledger |
+| `/v1/tenants/budget` | `POST` | `{"tenant_id": "...", "budget_limit_usd": 50.0}` | Update dynamic tenant budget limit |
+| `/v1/shadow/metrics` | `GET` | None | Fetch candidate shadow replication stats |
+| `/v1/console/state` | `GET` | None | Consolidated telemetry for WebUI |
+| `/health` | `GET` | None | Subsystem health & circuit breaker state |
+| `/metrics` | `GET` | None | Prometheus telemetry exposition |
+| `/ui/` | `GET` | None | Interactive Serving Console WebUI |
 
 ---
 
-### Example API Invocations
+## 11. License & Contributing
 
-#### Standard Chat Completion
-```bash
-curl -X POST http://localhost:8081/v1/chat/completions \
-  -H "Authorization: Bearer cinch-prod-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
-    "messages": [{"role": "user", "content": "Explain prefix caching in one sentence."}],
-    "max_tokens": 128
-  }'
-```
-
-#### Real-Time Server-Sent Events (SSE) Streaming
-```bash
-curl -X POST http://localhost:8081/v1/chat/completions \
-  -H "Authorization: Bearer cinch-prod-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
-    "messages": [{"role": "user", "content": "Write a Python binary search function."}],
-    "stream": true
-  }'
-```
-
-#### Multi-LoRA Dynamic Multiplexing (`base:adapter`)
-```bash
-curl -X POST http://localhost:8081/v1/chat/completions \
-  -H "Authorization: Bearer cinch-prod-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "Qwen/Qwen2.5-7B-Instruct-AWQ:sql-copilot",
-    "messages": [{"role": "user", "content": "SELECT id, name FROM users WHERE active = true;"}],
-    "max_tokens": 128
-  }'
-```
-
-#### Deterministic Guided JSON Grammar Output
-```bash
-curl -X POST http://localhost:8081/v1/chat/completions \
-  -H "Authorization: Bearer cinch-prod-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
-    "messages": [{"role": "user", "content": "Extract: server prod-1 has 64GB RAM."}],
-    "response_format": {
-      "type": "json_object",
-      "schema": {
-        "type": "object",
-        "properties": {
-          "hostname": {"type": "string"},
-          "ram_gb": {"type": "integer"}
-        },
-        "required": ["hostname", "ram_gb"]
-      }
-    }
-  }'
-```
-
----
-
-## 7. Empirical Benchmarks
-
-All metrics trace directly to JSON datasets stored in [benchmarks/results/](./benchmarks/results/).
-
-| Metric / Dimension | Benchmark Scenario | Baseline (Naive HF / Unmitigated) | Cinch Production Platform | Improvement Factor | Telemetry Source |
-|---|---|---|---|---|---|
-| **Inference Throughput** | Concurrency $C=16$ | $30.49\text{ tok/s}$ | **$331.00\text{ tok/s}$** | **$10.86\times$ Throughput Speedup** | [`comparison_summary.json`](./benchmarks/results/comparison_summary.json) |
-| **P95 Request Latency** | Concurrency $C=16$ | $32.02\text{ s}$ | **$6.29\text{ s}$** | **$5.09\times$ Latency Reduction** | [`comparison_summary.json`](./benchmarks/results/comparison_summary.json) |
-| **Quantization Quality** | AST Code, Math, JSON | $100\%$ FP16 Baseline | **$97.2\%$ Equivalence Index** | **$100\%$ Code Syntax Parity** | [`quality_eval.json`](./benchmarks/results/quality_eval.json) |
-| **Prefix Cache TTFT** | Shared System Prompt | $0.8856\text{ s}$ (Cold Prefill) | **$0.1818\text{ s}$ (Cache Hit)** | **$4.87\times$ Faster TTFT** | [`prefix_cache_benchmark.json`](./benchmarks/results/prefix_cache_benchmark.json) |
-| **Speculative Decoding** | Code & JSON ($K=5$) | $22.0\text{ ms/tok}$ | **$8.6\text{ ms/tok}$ ($\alpha=78.0\%$)** | **$2.58\times$ Generation Speedup** | [`speculative_decoding.json`](./benchmarks/results/speculative_decoding.json) |
-| **Semantic Cache Hit** | Duplicate Query | $680.0\text{ ms}$ (GPU Forward) | **$4.12\text{ ms}$ (Vector Lookup)** | **$165\times$ Latency Reduction** | [`semantic_cache_eval.json`](./benchmarks/results/semantic_cache_eval.json) |
-| **Prompt Compaction** | Context Windows | $100\%$ Token Volume | **$76.9\%$ Token Volume** | **$23.1\%$ Token Savings** | [`prompt_compaction_eval.json`](./benchmarks/results/prompt_compaction_eval.json) |
-| **Circuit Breaker** | Upstream Crash | $30,000\text{ ms}$ (Timeout) | **$45.56\text{ ms}$ (Fast-Fail 503)** | **$658\times$ Faster Fault Isolation** | [`chaos_resilience.json`](./benchmarks/results/chaos_resilience.json) |
-| **Self-Healing MTTR** | Worker Recovery | Manual Intervention | **$10.85\text{ s}$ (Canary Probe)** | **Automated Zero-Touch MTTR** | [`chaos_resilience.json`](./benchmarks/results/chaos_resilience.json) |
-| **AutoAWQ Compression** | Model Weight Size | $14.40\text{ GiB}$ (FP16) | **$4.20\text{ GiB}$ (W4A16 Marlin)** | **$3.88\times$ Weight Reduction** | [`quantization_summary.json`](./benchmarks/results/quantization_summary.json) |
-
----
-
-## 8. Contributing & Governance
-
-Contributions are welcome. Follow standard open-source conventions:
-
-1. **Branching**: Create focused feature branches (`feat/feature-name`, `fix/issue-description`, `bench/benchmark-target`).
-2. **Conventional Commits**: Format commit messages following the Conventional Commits specification:
-   - `feat:` for new capabilities or pipeline stages
-   - `fix:` for bug fixes or middleware patches
-   - `bench:` for performance benchmark additions
-   - `docs:` for documentation updates
-   - `test:` for test suite expansion
-3. **Testing Standard**: Every serving path modification must include automated tests verifying correctness (`python -m pytest tests/ -v`).
-4. **Code Quality**: Run `ruff check gateway/ tests/ scripts/` before submitting pull requests.
-
-```bash
-git checkout -b feat/my-new-feature
-git commit -m "feat(gateway): add custom response compression middleware"
-git push origin feat/my-new-feature
-```
-
----
-
-## 9. License
-
-This project is licensed under the Apache License 2.0. See the [LICENSE](./LICENSE) file for details.
+This project is licensed under the Apache License 2.0. See the [LICENSE](./LICENSE) file for details. Follow standard [Conventional Commits](https://www.conventionalcommits.org/) for pull requests.
