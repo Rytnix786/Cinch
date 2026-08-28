@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-import os
+import pathlib
 from gateway.telemetry import (
     Counter,
     Gauge,
@@ -83,8 +83,10 @@ def test_opentelemetry_span() -> None:
 
 def test_grafana_dashboard_json_validity() -> None:
     """Verify Grafana dashboard manifest exists, parses, and contains essential metrics."""
-    dashboard_path = "H:/Projects/Cinch/k8s/observability/grafana-dashboard.json"
-    assert os.path.exists(dashboard_path)
+    dashboard_path = (
+        pathlib.Path(__file__).parent.parent / "k8s" / "observability" / "grafana-dashboard.json"
+    )
+    assert dashboard_path.exists()
 
     with open(dashboard_path, "r", encoding="utf-8") as f:
         data = json.load(f)
