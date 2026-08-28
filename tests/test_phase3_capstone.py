@@ -15,7 +15,14 @@ def setup_gateway_client() -> None:
             return httpx.Response(
                 200,
                 json={
-                    "choices": [{"message": {"role": "assistant", "content": "A Kubernetes pod transitions from Pending to Running and then to Succeeded."}}],
+                    "choices": [
+                        {
+                            "message": {
+                                "role": "assistant",
+                                "content": "A Kubernetes pod transitions from Pending to Running and then to Succeeded.",
+                            }
+                        }
+                    ],
                     "usage": {"prompt_tokens": 15, "completion_tokens": 20, "total_tokens": 35},
                 },
             )
@@ -106,9 +113,14 @@ async def test_console_state_full_aggregation() -> None:
         data = resp.json()
         assert data["status"] == "healthy"
         expected_keys = [
-            "queue", "prefix_cache", "semantic_cache",
-            "finops", "shadow_replayer", "guardrails",
-            "tool_engine", "compressor",
+            "queue",
+            "prefix_cache",
+            "semantic_cache",
+            "finops",
+            "shadow_replayer",
+            "guardrails",
+            "tool_engine",
+            "compressor",
         ]
         for key in expected_keys:
             assert key in data, f"Missing key {key} in console state"

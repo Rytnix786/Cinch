@@ -57,9 +57,7 @@ class TenantRecord:
 
     def to_dict(self) -> Dict[str, Any]:
         remaining = max(0.0, self.budget_limit_usd - self.total_spend_usd)
-        utilization_pct = round(
-            (self.total_spend_usd / max(self.budget_limit_usd, 0.0001)) * 100.0, 1
-        )
+        utilization_pct = round((self.total_spend_usd / max(self.budget_limit_usd, 0.0001)) * 100.0, 1)
         return {
             "tenant_id": self.tenant_id,
             "team_id": self.team_id,

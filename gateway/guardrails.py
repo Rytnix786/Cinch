@@ -190,9 +190,7 @@ class GuardrailsScanner:
             scan_latency_ms=round(elapsed_ms, 3),
         )
 
-    def sanitize_egress(
-        self, completion_text: str, system_prompt: Optional[str] = None
-    ) -> Tuple[str, bool]:
+    def sanitize_egress(self, completion_text: str, system_prompt: Optional[str] = None) -> Tuple[str, bool]:
         """
         Sanitize generated completion before returning to client.
 
@@ -214,9 +212,7 @@ class GuardrailsScanner:
         if self.system_prompt_leak_defense and system_prompt and len(system_prompt.strip()) > 20:
             cleaned_sys = system_prompt.strip()
             # If the completion regurgitates significant chunks of the system prompt
-            if cleaned_sys in sanitized or (
-                len(cleaned_sys) > 50 and cleaned_sys[:50] in sanitized
-            ):
+            if cleaned_sys in sanitized or (len(cleaned_sys) > 50 and cleaned_sys[:50] in sanitized):
                 sanitized = re.sub(
                     re.escape(cleaned_sys),
                     "[SYSTEM_INSTRUCTION_REDACTED]",

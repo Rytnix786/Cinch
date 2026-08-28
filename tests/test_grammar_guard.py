@@ -59,7 +59,7 @@ def test_extract_constraints_guided_regex_and_choice() -> None:
 
 def test_strip_markdown_code_fences() -> None:
     guard = GrammarGuard()
-    raw = "Here is your JSON output:\n```json\n{\n  \"status\": \"ok\",\n  \"count\": 42\n}\n```\nHope that helps!"
+    raw = 'Here is your JSON output:\n```json\n{\n  "status": "ok",\n  "count": 42\n}\n```\nHope that helps!'
     sanitized, repaired = guard.sanitize_and_repair_json(raw)
     assert repaired is True
     parsed = json.loads(sanitized)
@@ -152,7 +152,7 @@ def test_metrics_tracking() -> None:
 
     guard.validate_constraint('{"valid": true}', c_json)
     guard.validate_constraint('```json\n{"repaired": true,}\n```', c_json)
-    guard.validate_constraint('not a json at all', c_json)
+    guard.validate_constraint("not a json at all", c_json)
 
     metrics = guard.get_metrics()
     assert metrics["total_guarded_requests"] == 3

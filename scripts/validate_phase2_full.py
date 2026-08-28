@@ -16,7 +16,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from scripts.quantize_awq import calculate_quantization_statistics, generate_quantization_config
 
 
-
 async def run_full_phase2_validation(
     gateway_url: str = "http://localhost:8081",
     api_key: str = "cinch-prod-key",
@@ -39,26 +38,39 @@ async def run_full_phase2_validation(
         print("1. Validating Module 1: Token Rate Limiting & Tiered Priority Queue...")
         r_mod1 = await client.post(
             f"{gateway_url}/v1/chat/completions",
-            json={"model": "Qwen/Qwen2.5-7B-Instruct-AWQ", "messages": [{"role": "user", "content": "1+1"}], "max_tokens": 5, "priority": "high"},
+            json={
+                "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+                "messages": [{"role": "user", "content": "1+1"}],
+                "max_tokens": 5,
+                "priority": "high",
+            },
             headers=headers,
         )
         has_tpm_headers = "X-RateLimit-Limit-Tokens" in r_mod1.headers
         has_priority_headers = r_mod1.headers.get("X-Request-Priority") == "high"
         results["module_1_token_priority"] = {
-            "status": "passed" if (r_mod1.status_code == 200 and has_tpm_headers and has_priority_headers) else "failed",
+            "status": "passed"
+            if (r_mod1.status_code == 200 and has_tpm_headers and has_priority_headers)
+            else "failed",
             "status_code": r_mod1.status_code,
             "tpm_limit": r_mod1.headers.get("X-RateLimit-Limit-Tokens"),
             "estimated_tokens": r_mod1.headers.get("X-Request-Estimated-Tokens"),
             "priority": r_mod1.headers.get("X-Request-Priority"),
         }
-        print(f"   Status: {results['module_1_token_priority']['status'].upper()} (TPM: {r_mod1.headers.get('X-RateLimit-Limit-Tokens')}, Prio: {r_mod1.headers.get('X-Request-Priority')})")
+        print(
+            f"   Status: {results['module_1_token_priority']['status'].upper()} (TPM: {r_mod1.headers.get('X-RateLimit-Limit-Tokens')}, Prio: {r_mod1.headers.get('X-Request-Priority')})"
+        )
 
         # Module 2: Prefix Cache Affinity Router
         print("\n2. Validating Module 2: Prefix Cache Hashing & Affinity Router...")
         sys_prompt = "You are a specialized enterprise AI coding assistant with deep architecture knowledge."
         r_mod2 = await client.post(
             f"{gateway_url}/v1/chat/completions",
-            json={"model": "Qwen/Qwen2.5-7B-Instruct-AWQ", "messages": [{"role": "system", "content": sys_prompt}, {"role": "user", "content": "hello"}], "max_tokens": 5},
+            json={
+                "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+                "messages": [{"role": "system", "content": sys_prompt}, {"role": "user", "content": "hello"}],
+                "max_tokens": 5,
+            },
             headers=headers,
         )
         prefix_hash = r_mod2.headers.get("X-Cache-Prefix-Hash", "")
@@ -69,7 +81,9 @@ async def run_full_phase2_validation(
             "cache_status": cache_status,
             "hit_ratio": r_mod2.headers.get("X-Cache-Hit-Ratio"),
         }
-        print(f"   Status: {results['module_2_prefix_caching']['status'].upper()} (Hash: {prefix_hash}, Status: {cache_status})")
+        print(
+            f"   Status: {results['module_2_prefix_caching']['status'].upper()} (Hash: {prefix_hash}, Status: {cache_status})"
+        )
 
         # Module 3: Speculative Decoding Simulator
         print("\n3. Validating Module 3: Speculative Decoding Integration...")
@@ -88,7 +102,9 @@ async def run_full_phase2_validation(
             "acceptance_rate_alpha": avg_alpha,
             "draft_k": 5,
         }
-        print(f"   Status: {results['module_3_speculative_decoding']['status'].upper()} (Speedup: {avg_speedup}x, Alpha: {avg_alpha:.1%})")
+        print(
+            f"   Status: {results['module_3_speculative_decoding']['status'].upper()} (Speedup: {avg_speedup}x, Alpha: {avg_alpha:.1%})"
+        )
 
         # Module 4: Prometheus & OpenTelemetry Observability
         print("\n4. Validating Module 4: Prometheus Metrics & OpenTelemetry Tracing...")
@@ -101,7 +117,9 @@ async def run_full_phase2_validation(
             "contains_cinch_metrics": has_prom_metrics,
             "w3c_traceparent_injected": has_otel_header,
         }
-        print(f"   Status: {results['module_4_observability']['status'].upper()} (Prometheus HTTP 200, Traceparent: {r_mod1.headers.get('traceparent')})")
+        print(
+            f"   Status: {results['module_4_observability']['status'].upper()} (Prometheus HTTP 200, Traceparent: {r_mod1.headers.get('traceparent')})"
+        )
 
         # Module 5: Circuit Breaker Fault Protection
         print("\n5. Validating Module 5: Circuit Breaker & Fault Resilience...")
@@ -114,7 +132,9 @@ async def run_full_phase2_validation(
             "failure_threshold": cb_data.get("failure_threshold"),
             "cooldown_seconds": cb_data.get("recovery_timeout_seconds"),
         }
-        print(f"   Status: {results['module_5_circuit_breaker']['status'].upper()} (Circuit State: {cb_data.get('state')})")
+        print(
+            f"   Status: {results['module_5_circuit_breaker']['status'].upper()} (Circuit State: {cb_data.get('state')})"
+        )
 
         # Module 6: AutoAWQ Quantization Pipeline
         print("\n6. Validating Module 6: AutoAWQ Quantization Pipeline...")
@@ -126,7 +146,9 @@ async def run_full_phase2_validation(
             "compression_ratio": q_stats["compression_ratio"],
             "vram_saved_gb": q_stats["vram_saved_gb"],
         }
-        print(f"   Status: PASSED (Compression: {q_stats['compression_ratio']}x, VRAM Saved: {q_stats['vram_saved_gb']} GiB)")
+        print(
+            f"   Status: PASSED (Compression: {q_stats['compression_ratio']}x, VRAM Saved: {q_stats['vram_saved_gb']} GiB)"
+        )
 
     # Overall Summary
     all_passed = all(m.get("status") == "passed" for m in results.values())

@@ -116,7 +116,6 @@ def enforce_rate_limit(
         "X-RateLimit-Reset": str(int(time.time() + 60.0)),
     }
 
-
     if not allowed:
         headers["Retry-After"] = str(int(retry_after))
         raise HTTPException(

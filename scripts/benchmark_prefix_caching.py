@@ -92,7 +92,9 @@ async def run_prefix_cache_benchmark(
         # 1. Warm Prefix Cache Sweep (Shared System Prompt)
         print("\n--- Running Shared System Prompt Sweep (Prefix Cache Hits) ---")
         for i in range(iterations):
-            user_msg = f"Provide question #{i+1}: What is linearizability vs serializability in distributed databases?"
+            user_msg = (
+                f"Provide question #{i + 1}: What is linearizability vs serializability in distributed databases?"
+            )
             res = await measure_streaming_ttft(
                 client=client,
                 gateway_url=gateway_url,
@@ -111,7 +113,7 @@ async def run_prefix_cache_benchmark(
         # 2. Unique Cold Prefix Sweep (Different system prompt each request)
         print("\n--- Running Unique Cold Prompt Sweep (Prefix Cache Misses) ---")
         for i in range(iterations):
-            unique_sys = f"You are arbitrary persona #{i+1} with unique instructions: {os.urandom(32).hex()}."
+            unique_sys = f"You are arbitrary persona #{i + 1} with unique instructions: {os.urandom(32).hex()}."
             user_msg = "Provide a brief summary of consensus algorithms."
             res = await measure_streaming_ttft(
                 client=client,
@@ -170,7 +172,9 @@ def main() -> None:
     parser.add_argument("--gateway-url", type=str, default="http://localhost:8081", help="Gateway URL")
     parser.add_argument("--api-key", type=str, default="cinch-prod-key", help="Gateway API Key")
     parser.add_argument("--iterations", type=int, default=5, help="Iterations per sweep")
-    parser.add_argument("--output", type=str, default="benchmarks/results/prefix_cache_benchmark.json", help="Output path")
+    parser.add_argument(
+        "--output", type=str, default="benchmarks/results/prefix_cache_benchmark.json", help="Output path"
+    )
     args = parser.parse_args()
 
     asyncio.run(

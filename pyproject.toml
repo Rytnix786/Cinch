@@ -4,10 +4,19 @@ python_files = ["test_*.py"]
 addopts = "-v --strict-markers"
 
 [tool.ruff]
+line-length = 120
+target-version = "py312"
 exclude = [
     ".agent",
     "skills",
     ".git",
     "__pycache__",
     ".venv",
+    ".benchmarks",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = [
+    "E501",
 ]

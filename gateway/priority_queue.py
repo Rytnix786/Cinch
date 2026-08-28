@@ -13,7 +13,7 @@ class RequestPriority(enum.IntEnum):
     """Priority level where lower integer denotes higher dispatch priority."""
 
     HIGH = 0  # Real-time / Interactive / VIP
-    LOW = 1   # Batch / Background
+    LOW = 1  # Batch / Background
 
 
 class PriorityRequestQueue:
@@ -59,9 +59,7 @@ class PriorityRequestQueue:
                 return request_id
 
             if self.queue_depth >= self.max_queue:
-                raise RuntimeError(
-                    f"Gateway priority queue full ({self.queue_depth}/{self.max_queue}). Load shed."
-                )
+                raise RuntimeError(f"Gateway priority queue full ({self.queue_depth}/{self.max_queue}). Load shed.")
 
             # Enqueue into priority queue
             if priority == RequestPriority.HIGH:

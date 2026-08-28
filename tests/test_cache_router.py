@@ -9,7 +9,10 @@ def test_extract_prompt_prefix_system() -> None:
     """Verify prefix extraction from system message."""
     body = {
         "messages": [
-            {"role": "system", "content": "You are an expert autonomous code refactoring assistant with deep Python knowledge."},
+            {
+                "role": "system",
+                "content": "You are an expert autonomous code refactoring assistant with deep Python knowledge.",
+            },
             {"role": "user", "content": "Hello!"},
         ]
     }
@@ -22,7 +25,10 @@ def test_extract_prompt_prefix_fallback_user() -> None:
     """Verify fallback to long first user message when no system message exists."""
     body = {
         "messages": [
-            {"role": "user", "content": "Please analyze this long multi-line document and extract all key technical entities and dates."},
+            {
+                "role": "user",
+                "content": "Please analyze this long multi-line document and extract all key technical entities and dates.",
+            },
         ]
     }
     prefix, p_hash = extract_prompt_prefix(body, min_chars=32)
@@ -48,8 +54,12 @@ def test_extract_prompt_prefix_short_ignored() -> None:
 
 def test_sha256_hash_stability() -> None:
     """Verify hash stability across extra spaces and newlines."""
-    body1 = {"messages": [{"role": "system", "content": "You are a helpful coding assistant.\n\nAlways provide tests."}]}
-    body2 = {"messages": [{"role": "system", "content": "You are a  helpful   coding assistant. Always provide tests."}]}
+    body1 = {
+        "messages": [{"role": "system", "content": "You are a helpful coding assistant.\n\nAlways provide tests."}]
+    }
+    body2 = {
+        "messages": [{"role": "system", "content": "You are a  helpful   coding assistant. Always provide tests."}]
+    }
 
     _, hash1 = extract_prompt_prefix(body1, min_chars=20)
     _, hash2 = extract_prompt_prefix(body2, min_chars=20)

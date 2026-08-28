@@ -69,7 +69,7 @@ async def run_benchmark(
             lat_ms = (time.perf_counter() - t0) * 1000.0
             cold_latencies.append(lat_ms)
             cache_status = resp.headers.get("X-Semantic-Cache-Status", "unknown")
-            print(f"  [{i+1:2d}] {lat_ms:7.1f}ms | {cache_status} | HTTP {resp.status_code}")
+            print(f"  [{i + 1:2d}] {lat_ms:7.1f}ms | {cache_status} | HTTP {resp.status_code}")
 
         # Phase 2: Exact repeat requests — all HIT
         print(f"\nPhase 2: Exact Repeat Queries ({len(COLD_PROMPTS)} identical requests -> HIT expected)...")
@@ -84,7 +84,7 @@ async def run_benchmark(
             hit_latencies.append(lat_ms)
             cache_status = resp.headers.get("X-Semantic-Cache-Status", "unknown")
             similarity = resp.headers.get("X-Semantic-Cache-Similarity", "n/a")
-            print(f"  [{i+1:2d}] {lat_ms:7.2f}ms | {cache_status} (sim={similarity}) | HTTP {resp.status_code}")
+            print(f"  [{i + 1:2d}] {lat_ms:7.2f}ms | {cache_status} (sim={similarity}) | HTTP {resp.status_code}")
 
         # Phase 3: Paraphrase variants
         print(f"\nPhase 3: Paraphrase Variants ({len(PARAPHRASE_PROMPTS)} rephrasings -> HIT rate measured)...")
@@ -101,7 +101,7 @@ async def run_benchmark(
             similarity = resp.headers.get("X-Semantic-Cache-Similarity", "0")
             if cache_status == "HIT":
                 paraphrase_hits += 1
-            print(f"  [{i+1:2d}] {lat_ms:7.2f}ms | {cache_status} (sim={similarity}) | HTTP {resp.status_code}")
+            print(f"  [{i + 1:2d}] {lat_ms:7.2f}ms | {cache_status} (sim={similarity}) | HTTP {resp.status_code}")
 
     avg_cold = sum(cold_latencies) / len(cold_latencies)
     avg_hit = sum(hit_latencies) / len(hit_latencies)
@@ -114,7 +114,9 @@ async def run_benchmark(
     print(f"  Cold GPU Path Average Latency:    {avg_cold:7.1f} ms")
     print(f"  Semantic Cache HIT Average:       {avg_hit:7.2f} ms")
     print(f"  Speedup Factor:                   {speedup:.1f}x faster on cache HITs")
-    print(f"  Paraphrase Hit Rate:              {paraphrase_hit_rate:.0%} ({paraphrase_hits}/{len(PARAPHRASE_PROMPTS)} paraphrases hit cache)")
+    print(
+        f"  Paraphrase Hit Rate:              {paraphrase_hit_rate:.0%} ({paraphrase_hits}/{len(PARAPHRASE_PROMPTS)} paraphrases hit cache)"
+    )
     print("=" * 70)
 
     payload = {

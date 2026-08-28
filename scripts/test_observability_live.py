@@ -81,7 +81,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Live Observability Test")
     parser.add_argument("--gateway-url", type=str, default="http://localhost:8081", help="Gateway URL")
     parser.add_argument("--api-key", type=str, default="cinch-prod-key", help="Gateway API Key")
-    parser.add_argument("--output", type=str, default="benchmarks/results/observability_snapshot.json", help="Output path")
+    parser.add_argument(
+        "--output", type=str, default="benchmarks/results/observability_snapshot.json", help="Output path"
+    )
     args = parser.parse_args()
 
     asyncio.run(

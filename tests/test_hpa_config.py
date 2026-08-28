@@ -49,14 +49,16 @@ def test_kustomization_includes_hpa() -> None:
 def test_query_k8s_hpa_status_mock() -> None:
     """Verify HPA and deployment telemetry parsing logic."""
     mock_deployment = json.dumps({"status": {"replicas": 4, "readyReplicas": 4}})
-    mock_hpa = json.dumps({
-        "status": {
-            "desiredReplicas": 4,
-            "currentMetrics": [
-                {"type": "Resource", "resource": {"name": "cpu", "current": {"averageUtilization": 78}}}
-            ],
+    mock_hpa = json.dumps(
+        {
+            "status": {
+                "desiredReplicas": 4,
+                "currentMetrics": [
+                    {"type": "Resource", "resource": {"name": "cpu", "current": {"averageUtilization": 78}}}
+                ],
+            }
         }
-    })
+    )
     mock_top = "cinch-gateway-abc 150m 45Mi\ncinch-gateway-def 140m 42Mi\n"
 
     def side_effect(cmd: list[str], *args: object, **kwargs: object) -> str:

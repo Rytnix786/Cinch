@@ -90,7 +90,6 @@ class PrefixCacheRouter:
             target_idx = abs(hash(prefix_hash)) % len(targets)
         selected_target = targets[target_idx]
 
-
         # Enforce LRU capacity limit
         if len(self._cache) >= self.capacity:
             self._cache.popitem(last=False)

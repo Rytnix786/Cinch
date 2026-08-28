@@ -44,7 +44,9 @@ def query_k8s_hpa_status() -> Dict[str, Any]:
         current_metrics = hpa_status.get("currentMetrics", [])
         for m in current_metrics:
             if m.get("type") == "Resource" and m.get("resource", {}).get("name") == "cpu":
-                status_info["current_cpu_percent"] = m.get("resource", {}).get("current", {}).get("averageUtilization", 0)
+                status_info["current_cpu_percent"] = (
+                    m.get("resource", {}).get("current", {}).get("averageUtilization", 0)
+                )
 
         # 3. Query pod top metrics
         top_out = subprocess.check_output(
@@ -106,7 +108,9 @@ async def run_hpa_load_test(
 ) -> Dict[str, Any]:
     """Execute sustained load test, monitor scaling transitions, and export time-series."""
     print(f"=== Starting HPA Scaling Load Test on {gateway_url} ===")
-    print(f"Target Concurrency: {concurrency} workers | Load Duration: {load_duration_seconds}s | Cooldown: {cooldown_seconds}s\n")
+    print(
+        f"Target Concurrency: {concurrency} workers | Load Duration: {load_duration_seconds}s | Cooldown: {cooldown_seconds}s\n"
+    )
 
     timeline: List[Dict[str, Any]] = []
     stop_traffic = asyncio.Event()
@@ -114,7 +118,9 @@ async def run_hpa_load_test(
     start_time = time.perf_counter()
 
     # Launch load generator
-    async with httpx.AsyncClient(limits=httpx.Limits(max_connections=concurrency * 2, max_keepalive_connections=concurrency)) as client:
+    async with httpx.AsyncClient(
+        limits=httpx.Limits(max_connections=concurrency * 2, max_keepalive_connections=concurrency)
+    ) as client:
         workers = [
             asyncio.create_task(traffic_worker(client, gateway_url, api_key, stop_traffic, request_counter))
             for _ in range(concurrency)
@@ -178,7 +184,9 @@ async def run_hpa_load_test(
         json.dump(summary_payload, f, indent=2)
 
     print(f"\n[SAVED] HPA scaling dataset saved to {output_path}")
-    print(f"Summary: Replicas scaled from {summary_payload['initial_replicas']} -> {summary_payload['peak_replicas']} (Peak CPU: {summary_payload['peak_cpu_percent']}%)")
+    print(
+        f"Summary: Replicas scaled from {summary_payload['initial_replicas']} -> {summary_payload['peak_replicas']} (Peak CPU: {summary_payload['peak_cpu_percent']}%)"
+    )
 
     return summary_payload
 

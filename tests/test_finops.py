@@ -20,7 +20,7 @@ def test_cost_calculation_accuracy() -> None:
     )
 
     expected_p = (1000 / 1000.0) * 0.00015  # 0.00015
-    expected_c = (500 / 1000.0) * 0.00060   # 0.00030
+    expected_c = (500 / 1000.0) * 0.00060  # 0.00030
     expected_tot = expected_p + expected_c  # 0.00045
 
     assert abs(cost_info.prompt_cost_usd - expected_p) < 1e-7

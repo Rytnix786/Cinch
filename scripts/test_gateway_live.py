@@ -112,7 +112,9 @@ def run_gateway_live_tests(
         metrics_resp = client.get("/metrics")
         if metrics_resp.status_code == 200:
             m = metrics_resp.json()
-            print(f"Gateway metrics: [PASS] (requests={m.get('total_requests')}, avg_latency={m.get('average_latency_seconds')}s)")
+            print(
+                f"Gateway metrics: [PASS] (requests={m.get('total_requests')}, avg_latency={m.get('average_latency_seconds')}s)"
+            )
     except Exception as e:
         print(f"[WARN] Metrics query failed: {e}")
 

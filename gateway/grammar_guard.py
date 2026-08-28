@@ -223,9 +223,7 @@ class GrammarGuard:
         except Exception:
             return raw_text, False
 
-    def validate_constraint(
-        self, text: str, constraint: StructuredConstraint
-    ) -> Tuple[bool, str, str]:
+    def validate_constraint(self, text: str, constraint: StructuredConstraint) -> Tuple[bool, str, str]:
         """
         Validate and sanitize completion against constraint.
 
@@ -279,7 +277,7 @@ class GrammarGuard:
 
         # 3. Guided Choice
         if ctype == "choice" and constraint.choices:
-            cleaned = text.strip().strip('"\'')
+            cleaned = text.strip().strip("\"'")
             if cleaned in constraint.choices:
                 self._valid_count += 1
                 return True, cleaned, "VALID"

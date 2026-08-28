@@ -122,22 +122,24 @@ async def run_benchmark(
             status_match = resp.status_code == run["expect_status"]
 
             print(
-                f"  [{i+1:2d}] Tenant: {run['tenant_id']:<18} | Status: {resp.status_code} "
+                f"  [{i + 1:2d}] Tenant: {run['tenant_id']:<18} | Status: {resp.status_code} "
                 f"(Expected {run['expect_status']}) | Cost: ${req_cost} | Spend: ${spend} | "
                 f"Rem: ${rem} [{'PASS' if status_match else 'FAIL'}]"
             )
 
-            results.append({
-                "tenant_id": run["tenant_id"],
-                "team_id": run["team_id"],
-                "status_code": resp.status_code,
-                "expected_status": run["expect_status"],
-                "request_cost_usd": float(req_cost),
-                "total_spend_usd": float(spend),
-                "budget_remaining_usd": float(rem),
-                "latency_ms": round(lat_ms, 2),
-                "passed": status_match,
-            })
+            results.append(
+                {
+                    "tenant_id": run["tenant_id"],
+                    "team_id": run["team_id"],
+                    "status_code": resp.status_code,
+                    "expected_status": run["expect_status"],
+                    "request_cost_usd": float(req_cost),
+                    "total_spend_usd": float(spend),
+                    "budget_remaining_usd": float(rem),
+                    "latency_ms": round(lat_ms, 2),
+                    "passed": status_match,
+                }
+            )
 
         # Step 3: Fetch full ledger report
         print("\n[Step 3] Fetching Tenant Usage Ledger via /v1/tenants/usage...")

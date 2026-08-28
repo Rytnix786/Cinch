@@ -12,6 +12,7 @@ from scripts.smoke_test import VLLMSmokeClient, main, parse_args
 # Fixtures & Mock Responses
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def mock_models_payload() -> dict:
     return {
@@ -56,6 +57,7 @@ def mock_completion_payload() -> dict:
 # Health Check Tests
 # ---------------------------------------------------------------------------
 
+
 def test_check_health_success():
     transport = httpx.MockTransport(lambda req: httpx.Response(200, json={"status": "ok"}))
     client = httpx.Client(transport=transport, base_url="http://testserver")
@@ -96,6 +98,7 @@ def test_check_health_connection_error():
 # Model Registry Tests
 # ---------------------------------------------------------------------------
 
+
 def test_get_models_success(mock_models_payload):
     transport = httpx.MockTransport(lambda req: httpx.Response(200, json=mock_models_payload))
     client = httpx.Client(transport=transport, base_url="http://testserver")
@@ -127,6 +130,7 @@ def test_get_models_http_error():
 # ---------------------------------------------------------------------------
 # Chat Completion Tests
 # ---------------------------------------------------------------------------
+
 
 def test_chat_completion_success(mock_completion_payload):
     transport = httpx.MockTransport(lambda req: httpx.Response(200, json=mock_completion_payload))
@@ -163,6 +167,7 @@ def test_chat_completion_http_error():
 # ---------------------------------------------------------------------------
 # Full Pipeline (run_all) Tests
 # ---------------------------------------------------------------------------
+
 
 def test_run_all_success(mock_models_payload, mock_completion_payload):
     def router(request: httpx.Request) -> httpx.Response:
@@ -242,6 +247,7 @@ def test_run_all_empty_completion(mock_models_payload):
 # ---------------------------------------------------------------------------
 # CLI Argument Parsing & Entrypoint Tests
 # ---------------------------------------------------------------------------
+
 
 def test_parse_args_defaults():
     args = parse_args([])

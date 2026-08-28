@@ -55,7 +55,9 @@ async def run_tenant_request(
         "cache": resp.headers.get("X-Semantic-Cache-Status", "MISS"),
         "cost_usd": resp.headers.get("X-FinOps-Request-Cost-USD", "$0.000000"),
         "budget_remaining": resp.headers.get("X-FinOps-Budget-Remaining-USD", "—"),
-        "response_text": resp.json().get("choices", [{}])[0].get("message", {}).get("content", "") if resp.status_code == 200 else resp.text,
+        "response_text": resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+        if resp.status_code == 200
+        else resp.text,
     }
 
 
@@ -98,42 +100,68 @@ async def main():
         # Step 1: Tenant A sends VIP Request
         print("\n[Step 2] Tenant A (VIP Data Science) Dispatches Critical Interactive Inference...")
         res_a = await run_tenant_request(
-            client, args.gateway_url, args.api_key,
-            tenant_id="data-science", team_id="nlp-research",
+            client,
+            args.gateway_url,
+            args.api_key,
+            tenant_id="data-science",
+            team_id="nlp-research",
             prompt="Analyze architectural differences between PagedAttention and standard attention.",
-            priority="high", max_tokens=60,
+            priority="high",
+            max_tokens=60,
         )
-        print(f"  • Status: {res_a['status']} | Latency: {res_a['latency_ms']:.2f} ms | Cost: {res_a['cost_usd']} | Remaining: ${res_a['budget_remaining']}")
+        print(
+            f"  • Status: {res_a['status']} | Latency: {res_a['latency_ms']:.2f} ms | Cost: {res_a['cost_usd']} | Remaining: ${res_a['budget_remaining']}"
+        )
         print(f"  • Preview: {res_a['response_text'][:120]}...")
 
         # Step 2: Tenant B sends Query, then duplicate (Semantic Cache Hit)
         print("\n[Step 3] Tenant B (Analytics) Dispatches Analytics Queries (Testing Semantic Cache)...")
         q_analytics = "What are the core metrics for evaluating LLM latency and throughput?"
         res_b1 = await run_tenant_request(
-            client, args.gateway_url, args.api_key,
-            tenant_id="analytics", team_id="bi-team",
-            prompt=q_analytics, priority="low", max_tokens=40,
+            client,
+            args.gateway_url,
+            args.api_key,
+            tenant_id="analytics",
+            team_id="bi-team",
+            prompt=q_analytics,
+            priority="low",
+            max_tokens=40,
         )
-        print(f"  • Query 1 (Cold Forward Pass): Latency: {res_b1['latency_ms']:.2f} ms | Cache Status: {res_b1['cache']} | Cost: {res_b1['cost_usd']}")
+        print(
+            f"  • Query 1 (Cold Forward Pass): Latency: {res_b1['latency_ms']:.2f} ms | Cache Status: {res_b1['cache']} | Cost: {res_b1['cost_usd']}"
+        )
 
         res_b2 = await run_tenant_request(
-            client, args.gateway_url, args.api_key,
-            tenant_id="analytics", team_id="bi-team",
-            prompt=q_analytics, priority="low", max_tokens=40,
+            client,
+            args.gateway_url,
+            args.api_key,
+            tenant_id="analytics",
+            team_id="bi-team",
+            prompt=q_analytics,
+            priority="low",
+            max_tokens=40,
         )
-        speedup = res_b1['latency_ms'] / res_b2['latency_ms'] if res_b2['latency_ms'] > 0 else 1.0
-        print(f"  • Query 2 (Hot Semantic Hit):  Latency: {res_b2['latency_ms']:.2f} ms | Cache Status: {res_b2['cache']} | Speedup: {speedup:.1f}x (0W GPU Power)")
+        speedup = res_b1["latency_ms"] / res_b2["latency_ms"] if res_b2["latency_ms"] > 0 else 1.0
+        print(
+            f"  • Query 2 (Hot Semantic Hit):  Latency: {res_b2['latency_ms']:.2f} ms | Cache Status: {res_b2['cache']} | Speedup: {speedup:.1f}x (0W GPU Power)"
+        )
 
         # Step 3: Tenant C attempts request that breaches budget
         print("\n[Step 4] Tenant C (Intern Sandbox) Attempts High-Token Query with Exhausted Budget...")
         res_c = await run_tenant_request(
-            client, args.gateway_url, args.api_key,
-            tenant_id="intern-sandbox", team_id="exploratory",
+            client,
+            args.gateway_url,
+            args.api_key,
+            tenant_id="intern-sandbox",
+            team_id="exploratory",
             prompt="Generate a 5000-word book about distributed cloud architecture and systems design.",
-            priority="low", max_tokens=256,
+            priority="low",
+            max_tokens=256,
         )
         if res_c["status"] == 402:
-            print(f"  ✓ SUCCESS: Gateway intercepted request before GPU compute: HTTP 402 Payment Required ({res_c['response_text'][:90]}...)")
+            print(
+                f"  ✓ SUCCESS: Gateway intercepted request before GPU compute: HTTP 402 Payment Required ({res_c['response_text'][:90]}...)"
+            )
         else:
             print(f"  • Tenant C Status: {res_c['status']} (Latency: {res_c['latency_ms']:.2f} ms)")
 
@@ -141,11 +169,19 @@ async def main():
         print("\n" + "=" * 80)
         print("  SHOWCASE SCENARIO SUMMARY RESULTS")
         print("=" * 80)
-        print(f"  Tenant A (VIP Data Science):   HTTP {res_a['status']} OK  | Latency: {res_a['latency_ms']:.1f} ms | Budget Enforced")
-        print(f"  Tenant B (Analytics Cache):   HTTP {res_b2['status']} OK  | Latency: {res_b2['latency_ms']:.1f} ms | Status: {res_b2['cache']}")
-        print(f"  Tenant C (Intern Budget Cap): HTTP {res_c['status']} CUT | Intercepted in {res_c['latency_ms']:.1f} ms | 0W GPU Wasted")
+        print(
+            f"  Tenant A (VIP Data Science):   HTTP {res_a['status']} OK  | Latency: {res_a['latency_ms']:.1f} ms | Budget Enforced"
+        )
+        print(
+            f"  Tenant B (Analytics Cache):   HTTP {res_b2['status']} OK  | Latency: {res_b2['latency_ms']:.1f} ms | Status: {res_b2['cache']}"
+        )
+        print(
+            f"  Tenant C (Intern Budget Cap): HTTP {res_c['status']} CUT | Intercepted in {res_c['latency_ms']:.1f} ms | 0W GPU Wasted"
+        )
         print("=" * 80)
-        print("  Enterprise Platform Story: Successfully Protected VIP SLA, Cut Duplicate Latency, and Enforced Hard Cost Limits.")
+        print(
+            "  Enterprise Platform Story: Successfully Protected VIP SLA, Cut Duplicate Latency, and Enforced Hard Cost Limits."
+        )
         print("=" * 80 + "\n")
 
 

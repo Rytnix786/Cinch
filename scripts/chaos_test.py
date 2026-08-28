@@ -27,10 +27,16 @@ async def run_chaos_evaluation(
         print("Phase 1: Verifying Baseline Healthy State (Circuit State: CLOSED)...")
         r_base = await client.post(
             f"{gateway_url}/v1/chat/completions",
-            json={"model": "Qwen/Qwen2.5-7B-Instruct-AWQ", "messages": [{"role": "user", "content": "ping"}], "max_tokens": 5},
+            json={
+                "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+                "messages": [{"role": "user", "content": "ping"}],
+                "max_tokens": 5,
+            },
             headers=headers,
         )
-        print(f"   Baseline Status: {r_base.status_code} | Breaker State: {r_base.headers.get('X-Circuit-Breaker-State')}")
+        print(
+            f"   Baseline Status: {r_base.status_code} | Breaker State: {r_base.headers.get('X-Circuit-Breaker-State')}"
+        )
 
         # Phase 2: Fault Injection (Bursting 8 faults to trip all cluster replicas)
         print("\nPhase 2: Injecting Upstream Fault Burst across Gateway Replicas to Trip Breakers...")
@@ -38,11 +44,17 @@ async def run_chaos_evaluation(
             t0 = time.perf_counter()
             r_fault = await client.post(
                 f"{gateway_url}/v1/chat/completions",
-                json={"model": "simulated-crash-model", "messages": [{"role": "user", "content": "crash"}], "max_tokens": 5},
+                json={
+                    "model": "simulated-crash-model",
+                    "messages": [{"role": "user", "content": "crash"}],
+                    "max_tokens": 5,
+                },
                 headers=headers,
             )
             lat = (time.perf_counter() - t0) * 1000.0
-            print(f"   Fault Probe #{i+1:2d}: Status {r_fault.status_code} ({lat:5.1f}ms) | Breaker: {r_fault.headers.get('X-Circuit-Breaker-State')}")
+            print(
+                f"   Fault Probe #{i + 1:2d}: Status {r_fault.status_code} ({lat:5.1f}ms) | Breaker: {r_fault.headers.get('X-Circuit-Breaker-State')}"
+            )
 
         # Phase 3: Fast-Fail Latency Protection
         print("\nPhase 3: Measuring Fast-Fail Latency Protection (Circuit State: OPEN)...")
@@ -50,14 +62,20 @@ async def run_chaos_evaluation(
             t0 = time.perf_counter()
             r_fast = await client.post(
                 f"{gateway_url}/v1/chat/completions",
-                json={"model": "Qwen/Qwen2.5-7B-Instruct-AWQ", "messages": [{"role": "user", "content": "blocked"}], "max_tokens": 5},
+                json={
+                    "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+                    "messages": [{"role": "user", "content": "blocked"}],
+                    "max_tokens": 5,
+                },
                 headers=headers,
             )
             lat_ms = (time.perf_counter() - t0) * 1000.0
             fast_fail_latencies.append(lat_ms)
             cb_state = r_fast.headers.get("X-Circuit-Breaker-State", "unknown")
             retry_after = r_fast.headers.get("Retry-After", "none")
-            print(f"   Fast-Fail Request #{i+1:2d}: Status {r_fast.status_code} in {lat_ms:5.2f}ms | Breaker: {cb_state} | Retry-After: {retry_after}s")
+            print(
+                f"   Fast-Fail Request #{i + 1:2d}: Status {r_fast.status_code} in {lat_ms:5.2f}ms | Breaker: {cb_state} | Retry-After: {retry_after}s"
+            )
 
         # Phase 4: Self-Healing Canary Probe & MTTR Recovery
         print("\nPhase 4: Waiting for Recovery Cooldown (10.0s) & Testing Canary Self-Healing...")
@@ -68,17 +86,29 @@ async def run_chaos_evaluation(
         print("   Dispatching Canary Recovery Probes...")
         r_canary1 = await client.post(
             f"{gateway_url}/v1/chat/completions",
-            json={"model": "Qwen/Qwen2.5-7B-Instruct-AWQ", "messages": [{"role": "user", "content": "What is 2+2?"}], "max_tokens": 5},
+            json={
+                "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+                "messages": [{"role": "user", "content": "What is 2+2?"}],
+                "max_tokens": 5,
+            },
             headers=headers,
         )
         r_canary2 = await client.post(
             f"{gateway_url}/v1/chat/completions",
-            json={"model": "Qwen/Qwen2.5-7B-Instruct-AWQ", "messages": [{"role": "user", "content": "What is 3+3?"}], "max_tokens": 5},
+            json={
+                "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+                "messages": [{"role": "user", "content": "What is 3+3?"}],
+                "max_tokens": 5,
+            },
             headers=headers,
         )
         mttr_seconds = time.perf_counter() - t_trip
-        print(f"   Canary #1: Status {r_canary1.status_code} | Breaker: {r_canary1.headers.get('X-Circuit-Breaker-State')}")
-        print(f"   Canary #2: Status {r_canary2.status_code} | Breaker: {r_canary2.headers.get('X-Circuit-Breaker-State')}")
+        print(
+            f"   Canary #1: Status {r_canary1.status_code} | Breaker: {r_canary1.headers.get('X-Circuit-Breaker-State')}"
+        )
+        print(
+            f"   Canary #2: Status {r_canary2.status_code} | Breaker: {r_canary2.headers.get('X-Circuit-Breaker-State')}"
+        )
         print(f"   Measured MTTR: {mttr_seconds:.2f}s")
 
         # Verify Breaker is restored to CLOSED
@@ -94,7 +124,9 @@ async def run_chaos_evaluation(
     print("\n=== Chaos Resilience Summary ===")
     print(f"Average Fast-Fail Response Latency: {avg_fast_fail_ms:.2f} ms")
     print(f"Unmitigated Connection Timeout:     {unmitigated_timeout_ms:.0f} ms")
-    print(f"Protection Factor:                  {latency_reduction_factor:.0f}x faster rejection (protecting queue & memory)")
+    print(
+        f"Protection Factor:                  {latency_reduction_factor:.0f}x faster rejection (protecting queue & memory)"
+    )
     print(f"Mean Time To Recover (MTTR):        {mttr_seconds:.2f} s")
 
     payload = {

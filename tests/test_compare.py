@@ -17,15 +17,39 @@ def test_build_comparison_data_calculations() -> None:
     baseline = {
         "engine": "HF-Naive",
         "tiers": [
-            {"concurrency": 1, "tokens_per_second": 30.0, "latency_p50": 2.0, "latency_p95": 2.2, "peak_vram_mib": 7800.0},
-            {"concurrency": 4, "tokens_per_second": 30.0, "latency_p50": 8.0, "latency_p95": 8.5, "peak_vram_mib": 7800.0},
+            {
+                "concurrency": 1,
+                "tokens_per_second": 30.0,
+                "latency_p50": 2.0,
+                "latency_p95": 2.2,
+                "peak_vram_mib": 7800.0,
+            },
+            {
+                "concurrency": 4,
+                "tokens_per_second": 30.0,
+                "latency_p50": 8.0,
+                "latency_p95": 8.5,
+                "peak_vram_mib": 7800.0,
+            },
         ],
     }
     optimized = {
         "engine": "vLLM-AWQ",
         "tiers": [
-            {"concurrency": 1, "tokens_per_second": 45.0, "latency_p50": 2.0, "latency_p95": 5.0, "peak_vram_mib": 7875.0},
-            {"concurrency": 4, "tokens_per_second": 180.0, "latency_p50": 2.0, "latency_p95": 5.5, "peak_vram_mib": 7875.0},
+            {
+                "concurrency": 1,
+                "tokens_per_second": 45.0,
+                "latency_p50": 2.0,
+                "latency_p95": 5.0,
+                "peak_vram_mib": 7875.0,
+            },
+            {
+                "concurrency": 4,
+                "tokens_per_second": 180.0,
+                "latency_p50": 2.0,
+                "latency_p95": 5.5,
+                "peak_vram_mib": 7875.0,
+            },
         ],
     }
     gateway = {

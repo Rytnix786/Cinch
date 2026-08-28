@@ -51,12 +51,7 @@ def test_sql_runner_in_memory_query() -> None:
 def test_python_repl_safe_execution() -> None:
     engine = ToolEngine()
 
-    code = (
-        "items = [10, 20, 30, 40]\n"
-        "total = sum(items)\n"
-        "avg = total / len(items)\n"
-        "print(f'Average: {avg}')"
-    )
+    code = "items = [10, 20, 30, 40]\ntotal = sum(items)\navg = total / len(items)\nprint(f'Average: {avg}')"
     ok, res = engine.execute_python_repl(code)
     assert ok is True
     assert "Average: 25.0" in res
@@ -110,7 +105,7 @@ def test_tool_calls_extraction_openai_and_text() -> None:
             {
                 "message": {
                     "role": "assistant",
-                    "content": "Let me calculate that for you: <tool_call>{\"name\": \"calculator\", \"arguments\": {\"expression\": \"15 * 3\"}}</tool_call>",
+                    "content": 'Let me calculate that for you: <tool_call>{"name": "calculator", "arguments": {"expression": "15 * 3"}}</tool_call>',
                 }
             }
         ]

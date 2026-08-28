@@ -54,7 +54,7 @@ def calculate_quantization_statistics(
     # 16-bit to 4-bit theoretical weight compression + group scale overhead
     scale_overhead = 1.0 + (16.0 / (q_group_size * w_bit))  # ~1.031x
     effective_bits = w_bit * scale_overhead
-    quant_size_gb = (fp16_size_gb * (effective_bits / 16.0))
+    quant_size_gb = fp16_size_gb * (effective_bits / 16.0)
     compression_ratio = fp16_size_gb / quant_size_gb
 
     return {

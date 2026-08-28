@@ -34,7 +34,10 @@ MULTIPLE_NEWLINES = re.compile(r"\n{3,}")
 
 FILLER_PHRASES = [
     (re.compile(r"\b(?:as an ai(?: assistant)?|as a helpful assistant)[,\s]+", re.IGNORECASE), ""),
-    (re.compile(r"\b(?:please note that|it is worth noting that|it is important to note that)[,\s]+", re.IGNORECASE), ""),
+    (
+        re.compile(r"\b(?:please note that|it is worth noting that|it is important to note that)[,\s]+", re.IGNORECASE),
+        "",
+    ),
     (re.compile(r"\bin order to\b", re.IGNORECASE), "to"),
     (re.compile(r"\bfor the purpose of\b", re.IGNORECASE), "for"),
     (re.compile(r"\bdue to the fact that\b", re.IGNORECASE), "because"),
@@ -46,15 +49,64 @@ FILLER_PHRASES = [
 ]
 
 LOW_ENTROPY_WORDS = {
-    "very", "really", "basically", "essentially", "literally", "somewhat",
-    "fairly", "obviously", "naturally", "clearly", "definitely", "absolutely",
-    "certainly", "indeed", "simply", "just", "quite", "rather", "extremely",
-    "incredibly", "actually", "honestly", "frankly", "furthermore", "moreover",
-    "additionally", "consequently", "specifically", "particular", "particularly",
-    "also", "always", "often", "usually", "generally", "already", "perhaps",
-    "maybe", "somehow", "meanwhile", "anyway", "therefore", "thus", "hence",
-    "hereby", "herein", "therein", "upon", "within", "must", "should", "would",
-    "could", "might", "shall", "that", "which", "such",
+    "very",
+    "really",
+    "basically",
+    "essentially",
+    "literally",
+    "somewhat",
+    "fairly",
+    "obviously",
+    "naturally",
+    "clearly",
+    "definitely",
+    "absolutely",
+    "certainly",
+    "indeed",
+    "simply",
+    "just",
+    "quite",
+    "rather",
+    "extremely",
+    "incredibly",
+    "actually",
+    "honestly",
+    "frankly",
+    "furthermore",
+    "moreover",
+    "additionally",
+    "consequently",
+    "specifically",
+    "particular",
+    "particularly",
+    "also",
+    "always",
+    "often",
+    "usually",
+    "generally",
+    "already",
+    "perhaps",
+    "maybe",
+    "somehow",
+    "meanwhile",
+    "anyway",
+    "therefore",
+    "thus",
+    "hence",
+    "hereby",
+    "herein",
+    "therein",
+    "upon",
+    "within",
+    "must",
+    "should",
+    "would",
+    "could",
+    "might",
+    "shall",
+    "that",
+    "which",
+    "such",
 }
 
 
@@ -116,6 +168,7 @@ class PromptCompressor:
         processed_text = text
 
         if self.preserve_code_blocks:
+
             def _extract_code(match: re.Match[str]) -> str:
                 idx = len(placeholders)
                 key = f"__PROTECTED_CODE_BLOCK_{idx}__"
@@ -252,9 +305,7 @@ class PromptCompressor:
         """Return operational metrics for prompt compressor."""
         total = max(self._total_requests, 1)
         savings_total = self._original_tokens_total - self._compacted_tokens_total
-        overall_ratio = round(
-            self._compacted_tokens_total / max(self._original_tokens_total, 1), 3
-        )
+        overall_ratio = round(self._compacted_tokens_total / max(self._original_tokens_total, 1), 3)
 
         return {
             "enabled": self.enabled,

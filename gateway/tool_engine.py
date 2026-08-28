@@ -119,6 +119,7 @@ def _safe_eval_ast(node: ast.AST) -> Any:
 # Tool Engine Core
 # ---------------------------------------------------------------------------
 
+
 class ToolEngine:
     """
     Sandboxed tool execution engine and agentic closed-loop orchestrator.
@@ -191,16 +192,39 @@ class ToolEngine:
     def execute_python_repl(self, code: str) -> Tuple[bool, str]:
         """Execute restricted Python code snippet with sanitized builtins."""
         # Block obvious shell/filesystem breakouts
-        if re.search(r"\b(?:import\s+(?:os|sys|subprocess|shutil|socket|requests|urllib)|__import__|eval|exec|open)\b", code):
-            return False, "Security violation: File system, network, and arbitrary code execution builtins are forbidden in sandbox."
+        if re.search(
+            r"\b(?:import\s+(?:os|sys|subprocess|shutil|socket|requests|urllib)|__import__|eval|exec|open)\b", code
+        ):
+            return (
+                False,
+                "Security violation: File system, network, and arbitrary code execution builtins are forbidden in sandbox.",
+            )
 
         safe_globals: Dict[str, Any] = {
             "__builtins__": {
-                "len": len, "range": range, "min": min, "max": max, "sum": sum,
-                "sorted": sorted, "list": list, "dict": dict, "set": set, "tuple": tuple,
-                "str": str, "int": int, "float": float, "bool": bool, "abs": abs,
-                "round": round, "enumerate": enumerate, "zip": zip, "map": map,
-                "filter": filter, "any": any, "all": all, "print": print,
+                "len": len,
+                "range": range,
+                "min": min,
+                "max": max,
+                "sum": sum,
+                "sorted": sorted,
+                "list": list,
+                "dict": dict,
+                "set": set,
+                "tuple": tuple,
+                "str": str,
+                "int": int,
+                "float": float,
+                "bool": bool,
+                "abs": abs,
+                "round": round,
+                "enumerate": enumerate,
+                "zip": zip,
+                "map": map,
+                "filter": filter,
+                "any": any,
+                "all": all,
+                "print": print,
             },
             "math": math,
             "json": json,
@@ -231,7 +255,9 @@ class ToolEngine:
                         return True, output.strip()
                     # Return modified local variables if any
                     clean_locals = {k: v for k, v in safe_locals.items() if not k.startswith("_")}
-                    return True, json.dumps(clean_locals, default=str) if clean_locals else "Code executed successfully with no output."
+                    return True, json.dumps(
+                        clean_locals, default=str
+                    ) if clean_locals else "Code executed successfully with no output."
         except Exception as exc:
             return False, f"Python execution error: {exc}"
 
@@ -288,7 +314,7 @@ class ToolEngine:
 
         return ToolExecutionResult(
             tool_name=tool_name,
-            tool_call_id=tool_call_id or f"call_{int(time.time()*1000)}",
+            tool_call_id=tool_call_id or f"call_{int(time.time() * 1000)}",
             success=success,
             output=output,
             error=error,
@@ -314,14 +340,16 @@ class ToolEngine:
             for i, match in enumerate(matches):
                 try:
                     call_obj = json.loads(match.strip())
-                    tool_calls.append({
-                        "id": f"call_text_{i}_{int(time.time())}",
-                        "type": "function",
-                        "function": {
-                            "name": call_obj.get("name", "calculator"),
-                            "arguments": json.dumps(call_obj.get("arguments", {})),
-                        },
-                    })
+                    tool_calls.append(
+                        {
+                            "id": f"call_text_{i}_{int(time.time())}",
+                            "type": "function",
+                            "function": {
+                                "name": call_obj.get("name", "calculator"),
+                                "arguments": json.dumps(call_obj.get("arguments", {})),
+                            },
+                        }
+                    )
                 except Exception:
                     pass
             if tool_calls:
@@ -336,14 +364,18 @@ class ToolEngine:
                 if start != -1 and end != -1 and end > start:
                     obj = json.loads(clean[start : end + 1])
                     if "name" in obj and "arguments" in obj:
-                        return [{
-                            "id": f"call_json_{int(time.time())}",
-                            "type": "function",
-                            "function": {
-                                "name": obj["name"],
-                                "arguments": json.dumps(obj["arguments"]) if isinstance(obj["arguments"], dict) else str(obj["arguments"]),
-                            },
-                        }]
+                        return [
+                            {
+                                "id": f"call_json_{int(time.time())}",
+                                "type": "function",
+                                "function": {
+                                    "name": obj["name"],
+                                    "arguments": json.dumps(obj["arguments"])
+                                    if isinstance(obj["arguments"], dict)
+                                    else str(obj["arguments"]),
+                                },
+                            }
+                        ]
             except Exception:
                 pass
 
@@ -366,7 +398,7 @@ class ToolEngine:
             "\n# Tools\n\nYou have access to the following tools:\n"
             + json.dumps(tools, indent=2)
             + "\n\nIf you choose to call a tool, you MUST reply ONLY with a tool call block:\n"
-            + "<tool_call>\n{\"name\": \"tool_name\", \"arguments\": {\"param\": \"value\"}}\n</tool_call>\n"
+            + '<tool_call>\n{"name": "tool_name", "arguments": {"param": "value"}}\n</tool_call>\n'
         )
 
         # Inject into system prompt or prepend as system message
@@ -374,7 +406,9 @@ class ToolEngine:
         if sys_idx is not None:
             messages[sys_idx]["content"] = messages[sys_idx].get("content", "") + tools_prompt
         else:
-            messages.insert(0, {"role": "system", "content": "You are a helpful assistant with access to tools." + tools_prompt})
+            messages.insert(
+                0, {"role": "system", "content": "You are a helpful assistant with access to tools." + tools_prompt}
+            )
 
         req_copy["messages"] = messages
         return req_copy, True

@@ -182,10 +182,7 @@ def format_tuning_table(records: List[Dict[str, Any]]) -> str:
 
     header_line = "| " + " | ".join(h.ljust(col_widths[i]) for i, h in enumerate(headers)) + " |"
     sep_line = "| " + " | ".join("-" * col_widths[i] for i in range(len(headers))) + " |"
-    data_lines = [
-        "| " + " | ".join(val.ljust(col_widths[i]) for i, val in enumerate(row)) + " |"
-        for row in rows
-    ]
+    data_lines = ["| " + " | ".join(val.ljust(col_widths[i]) for i, val in enumerate(row)) + " |" for row in rows]
     return "\n".join([header_line, sep_line] + data_lines)
 
 
@@ -220,7 +217,9 @@ def main() -> None:
         print(f"KV Cache geometry: {arch.bytes_per_token:,} bytes/token ({arch.mib_per_token:.5f} MiB/token)")
         print(f"GPU Hardware: {args.gpu_vram_mib:.0f} MiB VRAM")
         if telemetry.get("status") == "available":
-            print(f"Host Live: {telemetry['used_mib']:.0f} MiB used / {telemetry['total_mib']:.0f} MiB total ({telemetry['free_mib']:.0f} MiB free)\n")
+            print(
+                f"Host Live: {telemetry['used_mib']:.0f} MiB used / {telemetry['total_mib']:.0f} MiB total ({telemetry['free_mib']:.0f} MiB free)\n"
+            )
         else:
             print(f"Host Live: nvidia-smi unavailable ({telemetry.get('error')})\n")
 

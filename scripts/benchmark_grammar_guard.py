@@ -126,9 +126,7 @@ async def run_benchmark(
             if resp.status_code == 200:
                 try:
                     resp_json = resp.json()
-                    completion_text = (
-                        resp_json.get("choices", [{}])[0].get("message", {}).get("content", "")
-                    )
+                    completion_text = resp_json.get("choices", [{}])[0].get("message", {}).get("content", "")
                     # Verify parseability for JSON types
                     if scenario["expected_type"] in ("json_object", "json_schema"):
                         json.loads(completion_text)
@@ -138,14 +136,10 @@ async def run_benchmark(
                 except Exception:
                     is_valid_json = False
 
-            passed = (
-                resp.status_code == 200
-                and guard_status in ("VALID", "REPAIRED")
-                and is_valid_json
-            )
+            passed = resp.status_code == 200 and guard_status in ("VALID", "REPAIRED") and is_valid_json
 
             print(
-                f"  [{i+1:2d}] {scenario['name']:<30} | {lat_ms:6.1f}ms | "
+                f"  [{i + 1:2d}] {scenario['name']:<30} | {lat_ms:6.1f}ms | "
                 f"Type: {guard_type:<12} | Status: {guard_status:<10} "
                 f"[{'PASS' if passed else 'FAIL'}]"
             )
@@ -153,18 +147,20 @@ async def run_benchmark(
                 preview = completion_text.replace("\n", " ")[:60]
                 print(f"       Output Preview: {preview}...")
 
-            results.append({
-                "scenario": scenario["name"],
-                "description": scenario["description"],
-                "expected_type": scenario["expected_type"],
-                "resolved_type": guard_type,
-                "guard_status": guard_status,
-                "status_code": resp.status_code,
-                "latency_ms": round(lat_ms, 2),
-                "is_valid_json": is_valid_json,
-                "passed": passed,
-                "output_content": completion_text,
-            })
+            results.append(
+                {
+                    "scenario": scenario["name"],
+                    "description": scenario["description"],
+                    "expected_type": scenario["expected_type"],
+                    "resolved_type": guard_type,
+                    "guard_status": guard_status,
+                    "status_code": resp.status_code,
+                    "latency_ms": round(lat_ms, 2),
+                    "is_valid_json": is_valid_json,
+                    "passed": passed,
+                    "output_content": completion_text,
+                }
+            )
 
     total_scenarios = len(results)
     successful_scenarios = sum(1 for r in results if r["passed"])

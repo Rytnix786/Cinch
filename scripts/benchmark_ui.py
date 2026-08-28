@@ -59,14 +59,16 @@ async def run_benchmark(
                 f"Status: {resp.status_code} [{'PASS' if status_ok else 'FAIL'}]"
             )
 
-            asset_results.append({
-                "name": asset["name"],
-                "path": asset["path"],
-                "status_code": resp.status_code,
-                "avg_latency_ms": round(avg_lat, 2),
-                "min_latency_ms": round(min_lat, 2),
-                "passed": status_ok,
-            })
+            asset_results.append(
+                {
+                    "name": asset["name"],
+                    "path": asset["path"],
+                    "status_code": resp.status_code,
+                    "avg_latency_ms": round(avg_lat, 2),
+                    "min_latency_ms": round(min_lat, 2),
+                    "passed": status_ok,
+                }
+            )
 
         print("\n[Step 2] Benchmarking Live SSE Stream Rendering via Console Pipeline...")
         t_req_start = time.perf_counter()

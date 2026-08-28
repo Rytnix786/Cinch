@@ -31,6 +31,7 @@ def make_mock_client(handler: Any) -> httpx.AsyncClient:
 
 def test_health_healthy() -> None:
     """Verify /health returns 200 when upstream vLLM is healthy."""
+
     def mock_handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/health"
         return httpx.Response(200, json={"status": "ok"})
@@ -51,6 +52,7 @@ def test_health_healthy() -> None:
 
 def test_health_upstream_unreachable() -> None:
     """Verify /health returns 503 degraded when upstream vLLM is down."""
+
     def mock_handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("Connection refused")
 
@@ -70,6 +72,7 @@ def test_health_upstream_unreachable() -> None:
 
 def test_health_upstream_500() -> None:
     """Verify /health returns 503 degraded when upstream returns 500."""
+
     def mock_handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(500, text="Internal engine failure")
 
@@ -88,6 +91,7 @@ def test_health_upstream_500() -> None:
 
 def test_metrics_endpoint() -> None:
     """Verify /metrics tracks requests and average latency."""
+
     def mock_handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"status": "ok"})
 
@@ -110,6 +114,7 @@ def test_metrics_endpoint() -> None:
 
 def test_auth_disabled_by_default() -> None:
     """Verify requests pass without auth headers when GATEWAY_API_KEY is not set."""
+
     def mock_handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"data": [{"id": "Qwen/Qwen2.5-7B-Instruct-AWQ"}]})
 
@@ -223,8 +228,8 @@ def test_chat_completions_non_streaming() -> None:
 def test_chat_completions_streaming_sse() -> None:
     """Verify SSE streaming chat completion proxying."""
     sse_chunks = [
-        b"data: {\"choices\": [{\"delta\": {\"content\": \"Hello\"}}]}\n\n",
-        b"data: {\"choices\": [{\"delta\": {\"content\": \" world\"}}]}\n\n",
+        b'data: {"choices": [{"delta": {"content": "Hello"}}]}\n\n',
+        b'data: {"choices": [{"delta": {"content": " world"}}]}\n\n',
         b"data: [DONE]\n\n",
     ]
 
@@ -262,6 +267,7 @@ def test_chat_completions_streaming_sse() -> None:
 
 def test_chat_completions_upstream_error() -> None:
     """Verify upstream connection errors return 503."""
+
     def mock_handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectTimeout("Upstream timed out")
 

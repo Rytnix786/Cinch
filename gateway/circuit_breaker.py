@@ -9,8 +9,9 @@ from typing import Any, Dict, Optional, Tuple
 
 class CircuitState(enum.Enum):
     """Circuit breaker operational states."""
-    CLOSED = "closed"        # Normal operational state, requests pass through
-    OPEN = "open"            # Tripped state, fast-fails immediately with 503
+
+    CLOSED = "closed"  # Normal operational state, requests pass through
+    OPEN = "open"  # Tripped state, fast-fails immediately with 503
     HALF_OPEN = "half-open"  # Probing recovery state, permits single canary request
 
 

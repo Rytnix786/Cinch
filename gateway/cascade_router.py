@@ -93,9 +93,7 @@ class CascadeRouter:
         self._large_tier_count: int = 0
         self._total_complexity_score: float = 0.0
 
-    def analyze_complexity(
-        self, prompt: str, has_schema: bool = False
-    ) -> ComplexityAnalysis:
+    def analyze_complexity(self, prompt: str, has_schema: bool = False) -> ComplexityAnalysis:
         """
         Evaluate prompt complexity and return detailed tier breakdown.
 

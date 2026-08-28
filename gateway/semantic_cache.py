@@ -9,13 +9,58 @@ import time
 from typing import Any, Dict, Optional
 
 
-_STOP_WORDS = frozenset({
-    "a", "an", "the", "is", "it", "in", "on", "at", "to", "for", "of", "and",
-    "or", "but", "with", "this", "that", "are", "was", "be", "as", "by",
-    "from", "i", "me", "my", "you", "your", "we", "our", "how", "do", "can",
-    "what", "when", "where", "which", "who", "will", "would", "could", "should",
-    "please", "help", "give", "tell", "write", "make",
-})
+_STOP_WORDS = frozenset(
+    {
+        "a",
+        "an",
+        "the",
+        "is",
+        "it",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "and",
+        "or",
+        "but",
+        "with",
+        "this",
+        "that",
+        "are",
+        "was",
+        "be",
+        "as",
+        "by",
+        "from",
+        "i",
+        "me",
+        "my",
+        "you",
+        "your",
+        "we",
+        "our",
+        "how",
+        "do",
+        "can",
+        "what",
+        "when",
+        "where",
+        "which",
+        "who",
+        "will",
+        "would",
+        "could",
+        "should",
+        "please",
+        "help",
+        "give",
+        "tell",
+        "write",
+        "make",
+    }
+)
 
 
 def _tokenize(text: str) -> list[str]:
@@ -25,7 +70,7 @@ def _tokenize(text: str) -> list[str]:
     for w in words:
         if len(w) >= 3:
             for i in range(len(w) - 2):
-                features.append(w[i:i + 3])
+                features.append(w[i : i + 3])
     return features
 
 

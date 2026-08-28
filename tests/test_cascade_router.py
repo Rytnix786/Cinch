@@ -96,9 +96,7 @@ def test_explicit_model_override() -> None:
     router = CascadeRouter(small_model="Qwen/Qwen2.5-0.5B-Instruct", large_model="Qwen/Qwen2.5-7B-Instruct-AWQ")
 
     # Even though prompt is simple, explicit model selection is honored
-    model_resolved, analysis = router.resolve_model(
-        "Qwen/Qwen2.5-7B-Instruct-AWQ", "Hello there!"
-    )
+    model_resolved, analysis = router.resolve_model("Qwen/Qwen2.5-7B-Instruct-AWQ", "Hello there!")
     assert model_resolved == "Qwen/Qwen2.5-7B-Instruct-AWQ"
     assert analysis.tier == CascadeTier.SMALL  # analysis still records true complexity
 

@@ -100,23 +100,25 @@ async def run_benchmark(
             passed = tier == scenario["expected_tier"]
 
             print(
-                f"  [{i+1:2d}] {scenario['name']:<30} | {lat_ms:6.1f}ms | "
+                f"  [{i + 1:2d}] {scenario['name']:<30} | {lat_ms:6.1f}ms | "
                 f"Score: {score:.2f} | Tier: {tier:<5} -> {selected_model.split('/')[-1]:<25} "
                 f"[{'PASS' if passed else 'FAIL'}]"
             )
 
-            results.append({
-                "scenario": scenario["name"],
-                "category": scenario["category"],
-                "prompt": scenario["prompt"],
-                "expected_tier": scenario["expected_tier"],
-                "assigned_tier": tier,
-                "complexity_score": score,
-                "selected_model": selected_model,
-                "reason": reason,
-                "latency_ms": round(lat_ms, 2),
-                "passed": passed,
-            })
+            results.append(
+                {
+                    "scenario": scenario["name"],
+                    "category": scenario["category"],
+                    "prompt": scenario["prompt"],
+                    "expected_tier": scenario["expected_tier"],
+                    "assigned_tier": tier,
+                    "complexity_score": score,
+                    "selected_model": selected_model,
+                    "reason": reason,
+                    "latency_ms": round(lat_ms, 2),
+                    "passed": passed,
+                }
+            )
 
     total = len(results)
     passed_count = sum(1 for r in results if r["passed"])
@@ -133,8 +135,8 @@ async def run_benchmark(
     print("=" * 70)
     print(f"  Total Scenarios Evaluated:         {total}")
     print(f"  Routing Classification Accuracy:   {passed_count} / {total} ({accuracy:.1f}%)")
-    print(f"  Small Tier Invocations (0.5B):     {small_count} ({small_count/total*100:.1f}%)")
-    print(f"  Large Tier Invocations (7B AWQ):   {large_count} ({large_count/total*100:.1f}%)")
+    print(f"  Small Tier Invocations (0.5B):     {small_count} ({small_count / total * 100:.1f}%)")
+    print(f"  Large Tier Invocations (7B AWQ):   {large_count} ({large_count / total * 100:.1f}%)")
     print(f"  Estimated GPU Energy Saved:        {energy_saved_pct}% compute reduction")
     print(f"  Average End-to-End Latency:        {avg_latency:6.1f} ms")
     print("=" * 70)

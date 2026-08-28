@@ -47,9 +47,7 @@ TOOL_DEFINITIONS = [
             "description": "Execute restricted Python code snippet for data analysis and transformations.",
             "parameters": {
                 "type": "object",
-                "properties": {
-                    "code": {"type": "string", "description": "Python code snippet"}
-                },
+                "properties": {"code": {"type": "string", "description": "Python code snippet"}},
                 "required": ["code"],
             },
         },
@@ -129,22 +127,24 @@ async def run_benchmark(
             passed = resp.status_code == 200
 
             print(
-                f"  [{i+1:2d}] {scenario['name']:<35} | {lat_ms:6.1f}ms | "
+                f"  [{i + 1:2d}] {scenario['name']:<35} | {lat_ms:6.1f}ms | "
                 f"Tools Used: {tools_used:<15} | Executed: {str(executed_header):<5} "
                 f"[{'PASS' if passed else 'FAIL'}]"
             )
 
-            results.append({
-                "scenario": scenario["name"],
-                "prompt": scenario["prompt"],
-                "expected_tool": scenario["expected_tool"],
-                "tools_used": tools_used,
-                "tool_executed": executed_header,
-                "iterations": iterations,
-                "status_code": resp.status_code,
-                "latency_ms": round(lat_ms, 2),
-                "passed": passed,
-            })
+            results.append(
+                {
+                    "scenario": scenario["name"],
+                    "prompt": scenario["prompt"],
+                    "expected_tool": scenario["expected_tool"],
+                    "tools_used": tools_used,
+                    "tool_executed": executed_header,
+                    "iterations": iterations,
+                    "status_code": resp.status_code,
+                    "latency_ms": round(lat_ms, 2),
+                    "passed": passed,
+                }
+            )
 
     total = len(results)
     passed_count = sum(1 for r in results if r["passed"])

@@ -54,7 +54,6 @@ class Histogram:
         return "\n".join(lines)
 
 
-
 class Counter:
     """In-memory Prometheus Counter metric."""
 
@@ -137,6 +136,7 @@ metrics_registry = MetricsRegistry()
 
 
 # --- OpenTelemetry Distributed Tracing Helpers ---
+
 
 class OpenTelemetrySpan:
     """Lightweight W3C-compliant OpenTelemetry trace span."""

@@ -134,6 +134,7 @@ def test_load_eval_prompts() -> None:
 @pytest.mark.asyncio
 async def test_evaluate_single_item_mock() -> None:
     """Verify single item evaluation mock."""
+
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             200,
@@ -162,10 +163,19 @@ async def test_evaluate_single_item_mock() -> None:
 @pytest.mark.asyncio
 async def test_run_quality_evaluation_mock() -> None:
     """Verify complete quality evaluation mock run."""
+
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             200,
-            json={"choices": [{"message": {"content": "The speed is 80 mph. Also ```python\ndef f(): return 1\n``` and {\"framework\": \"vLLM\"}"}}]},
+            json={
+                "choices": [
+                    {
+                        "message": {
+                            "content": 'The speed is 80 mph. Also ```python\ndef f(): return 1\n``` and {"framework": "vLLM"}'
+                        }
+                    }
+                ]
+            },
         )
 
     transport = httpx.MockTransport(handler)

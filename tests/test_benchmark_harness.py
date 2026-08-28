@@ -58,10 +58,36 @@ def test_compute_concurrency_metrics_empty() -> None:
 def test_compute_concurrency_metrics_aggregation() -> None:
     """Verify aggregation of mixed successful and failed records."""
     records = [
-        RequestRecord("p1", concurrency=2, latency_seconds=1.0, ttft_seconds=0.2, prompt_tokens=10, completion_tokens=20, is_success=True),
-        RequestRecord("p2", concurrency=2, latency_seconds=2.0, ttft_seconds=0.4, prompt_tokens=15, completion_tokens=30, is_success=True),
-        RequestRecord("p3", concurrency=2, latency_seconds=3.0, ttft_seconds=0.6, prompt_tokens=20, completion_tokens=50, is_success=True),
-        RequestRecord("p4", concurrency=2, latency_seconds=0.5, status_code=500, is_success=False, error_message="Internal Error"),
+        RequestRecord(
+            "p1",
+            concurrency=2,
+            latency_seconds=1.0,
+            ttft_seconds=0.2,
+            prompt_tokens=10,
+            completion_tokens=20,
+            is_success=True,
+        ),
+        RequestRecord(
+            "p2",
+            concurrency=2,
+            latency_seconds=2.0,
+            ttft_seconds=0.4,
+            prompt_tokens=15,
+            completion_tokens=30,
+            is_success=True,
+        ),
+        RequestRecord(
+            "p3",
+            concurrency=2,
+            latency_seconds=3.0,
+            ttft_seconds=0.6,
+            prompt_tokens=20,
+            completion_tokens=50,
+            is_success=True,
+        ),
+        RequestRecord(
+            "p4", concurrency=2, latency_seconds=0.5, status_code=500, is_success=False, error_message="Internal Error"
+        ),
     ]
 
     metrics = compute_concurrency_metrics(
@@ -112,6 +138,7 @@ def test_load_prompts() -> None:
 @pytest.mark.asyncio
 async def test_send_single_request_non_streaming() -> None:
     """Verify single request execution against mock server."""
+
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             200,
@@ -142,10 +169,11 @@ async def test_send_single_request_non_streaming() -> None:
 @pytest.mark.asyncio
 async def test_send_single_request_streaming_sse() -> None:
     """Verify single streaming request execution and TTFT detection."""
+
     def handler(request: httpx.Request) -> httpx.Response:
         async def sse_gen() -> AsyncGenerator[bytes, None]:
-            yield b"data: {\"choices\": [{\"delta\": {\"content\": \"First\"}}]}\n\n"
-            yield b"data: {\"choices\": [{\"delta\": {\"content\": \" second\"}}]}\n\n"
+            yield b'data: {"choices": [{"delta": {"content": "First"}}]}\n\n'
+            yield b'data: {"choices": [{"delta": {"content": " second"}}]}\n\n'
             yield b"data: [DONE]\n\n"
 
         return httpx.Response(200, content=sse_gen(), headers={"content-type": "text/event-stream"})
@@ -169,6 +197,7 @@ async def test_send_single_request_streaming_sse() -> None:
 @pytest.mark.asyncio
 async def test_send_single_request_failure() -> None:
     """Verify handling of server error response."""
+
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(500, text="Internal Server Error")
 
@@ -193,8 +222,12 @@ _real_async_client = httpx.AsyncClient
 @pytest.mark.asyncio
 async def test_run_concurrency_tier_mock() -> None:
     """Verify concurrency worker distribution."""
+
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}], "usage": {"prompt_tokens": 5, "completion_tokens": 5}})
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": "ok"}}], "usage": {"prompt_tokens": 5, "completion_tokens": 5}},
+        )
 
     transport = httpx.MockTransport(handler)
 
@@ -220,8 +253,12 @@ async def test_run_concurrency_tier_mock() -> None:
 @pytest.mark.asyncio
 async def test_run_benchmark_suite_mock() -> None:
     """Verify full benchmark suite flow and JSON file export."""
+
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"choices": [{"message": {"content": "resp"}}], "usage": {"prompt_tokens": 5, "completion_tokens": 5}})
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": "resp"}}], "usage": {"prompt_tokens": 5, "completion_tokens": 5}},
+        )
 
     transport = httpx.MockTransport(handler)
 

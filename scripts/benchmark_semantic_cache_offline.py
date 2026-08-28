@@ -3,6 +3,7 @@ Offline empirical benchmark for SemanticCache — does not require a live gatewa
 Measures cache lookup latency, hit rate, and paraphrase detection accuracy directly
 against the SemanticCache class, producing the same JSON schema as the live benchmark.
 """
+
 from __future__ import annotations
 import json
 import os
@@ -10,7 +11,8 @@ import time
 from typing import Any, Dict, List
 
 import sys
-sys.path.insert(0, str(__import__('pathlib').Path(__file__).parent.parent))
+
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent.parent))
 
 from gateway.semantic_cache import SemanticCache
 
@@ -48,7 +50,9 @@ def fake_upstream_response(prompt: str) -> Dict[str, Any]:
         "id": "chatcmpl-offline",
         "object": "chat.completion",
         "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
-        "choices": [{"message": {"role": "assistant", "content": f"Response to: {prompt[:40]}"}, "finish_reason": "stop"}],
+        "choices": [
+            {"message": {"role": "assistant", "content": f"Response to: {prompt[:40]}"}, "finish_reason": "stop"}
+        ],
         "usage": {"prompt_tokens": 20, "completion_tokens": 30, "total_tokens": 50},
     }
 
@@ -80,7 +84,7 @@ def run_offline_benchmark(output_path: str) -> None:
             cache.store(prompt, upstream_response)
             total_ms = FAKE_UPSTREAM_LATENCY_MS + cache_lookup_ms
             cold_latencies.append(total_ms)
-            print(f"  [{i+1:2d}] {total_ms:8.1f}ms | MISS (lookup={cache_lookup_ms:.3f}ms) | stored in cache")
+            print(f"  [{i + 1:2d}] {total_ms:8.1f}ms | MISS (lookup={cache_lookup_ms:.3f}ms) | stored in cache")
         else:
             cold_latencies.append(cache_lookup_ms)
 
@@ -92,7 +96,7 @@ def run_offline_benchmark(output_path: str) -> None:
         elapsed_ms = (time.perf_counter() - t0) * 1000.0
         hit_latencies.append(elapsed_ms)
         status = "HIT" if resp is not None else "MISS"
-        print(f"  [{i+1:2d}] {elapsed_ms:8.3f}ms | {status} (sim={score:.4f})")
+        print(f"  [{i + 1:2d}] {elapsed_ms:8.3f}ms | {status} (sim={score:.4f})")
 
     # Phase 3: Paraphrase variants
     print(f"\nPhase 3: Paraphrase Variants ({len(PARAPHRASE_PROMPTS)} rephrasings -> HIT rate measured)...")
@@ -107,7 +111,7 @@ def run_offline_benchmark(output_path: str) -> None:
             status = "HIT"
         else:
             status = "MISS"
-        print(f"  [{i+1:2d}] {elapsed_ms:8.3f}ms | {status} (sim={score:.4f})")
+        print(f"  [{i + 1:2d}] {elapsed_ms:8.3f}ms | {status} (sim={score:.4f})")
 
     avg_cold = sum(cold_latencies) / len(cold_latencies)
     avg_hit = sum(hit_latencies) / len(hit_latencies)
@@ -121,7 +125,9 @@ def run_offline_benchmark(output_path: str) -> None:
     print(f"  Cold GPU Path Average Latency:    {avg_cold:8.1f} ms  (GPU sim + cache lookup)")
     print(f"  Semantic Cache HIT Average:       {avg_hit:8.3f} ms  (zero GPU)")
     print(f"  Speedup Factor:                   {speedup:.0f}x faster on cache HITs")
-    print(f"  Paraphrase Hit Rate:              {paraphrase_hit_rate:.0%} ({paraphrase_hits}/{len(PARAPHRASE_PROMPTS)})")
+    print(
+        f"  Paraphrase Hit Rate:              {paraphrase_hit_rate:.0%} ({paraphrase_hits}/{len(PARAPHRASE_PROMPTS)})"
+    )
     print(f"  Avg Paraphrase Similarity:        {avg_sim:.4f}")
     print("=" * 70)
 
@@ -165,6 +171,7 @@ def run_offline_benchmark(output_path: str) -> None:
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", default="benchmarks/results/semantic_cache_eval.json")
     args = parser.parse_args()

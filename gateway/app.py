@@ -311,16 +311,18 @@ async def list_models(
                     ("auto:cascade", "Smart Model Cascading tier selector"),
                 ]:
                     if not any(m.get("id") == auto_id for m in models_data.get("data", [])):
-                        models_data.setdefault("data", []).append({
-                            "id": auto_id,
-                            "object": "model",
-                            "created": created_ts,
-                            "owned_by": "cinch-cascade-router",
-                            "description": desc,
-                            "root": "auto",
-                            "parent": None,
-                            "permission": [],
-                        })
+                        models_data.setdefault("data", []).append(
+                            {
+                                "id": auto_id,
+                                "object": "model",
+                                "created": created_ts,
+                                "owned_by": "cinch-cascade-router",
+                                "description": desc,
+                                "root": "auto",
+                                "parent": None,
+                                "permission": [],
+                            }
+                        )
             return JSONResponse(
                 content=models_data,
                 status_code=200,
@@ -604,6 +606,7 @@ async def chat_completions(
     t_ingress = time.time()
 
     if is_streaming:
+
         async def stream_generator() -> AsyncGenerator[bytes, None]:
             ttft_recorded = False
             try:
@@ -622,7 +625,7 @@ async def chat_completions(
                         yield chunk
             except httpx.RequestError as exc:
                 gateway_state.circuit_breaker.record_failure()
-                yield f"data: {{\"error\": \"Upstream connection error: {exc}\"}}\n\n".encode("utf-8")
+                yield f'data: {{"error": "Upstream connection error: {exc}"}}\n\n'.encode("utf-8")
             finally:
                 await gateway_state.priority_queue.release()
                 span.finish()
@@ -701,7 +704,9 @@ async def chat_completions(
 
             rate_headers["X-Tool-Engine-Executed"] = "true" if tools_executed_list else "false"
             rate_headers["X-Tool-Engine-Iterations"] = str(tool_iterations)
-            rate_headers["X-Tool-Engine-Tools-Used"] = ",".join(set(tools_executed_list)) if tools_executed_list else "none"
+            rate_headers["X-Tool-Engine-Tools-Used"] = (
+                ",".join(set(tools_executed_list)) if tools_executed_list else "none"
+            )
 
             # Enforce and sanitize structured outputs if constraint is active
             if grammar_constraint.is_active:

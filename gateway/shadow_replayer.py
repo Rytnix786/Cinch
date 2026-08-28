@@ -135,16 +135,14 @@ class ShadowTrafficReplayer:
         Asynchronously dispatch duplicate request to candidate backend and record divergence metrics.
         """
         self._total_sampled += 1
-        trace_id = f"trace_{int(time.time()*1000)}_{random.randint(100, 999)}"
+        trace_id = f"trace_{int(time.time() * 1000)}_{random.randint(100, 999)}"
 
         headers = {"Content-Type": "application/json"}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
 
         messages = request_body.get("messages", [])
-        prompt_text = " ".join(
-            m.get("content", "") for m in messages if isinstance(m.get("content"), str)
-        )
+        prompt_text = " ".join(m.get("content", "") for m in messages if isinstance(m.get("content"), str))
         model = request_body.get("model", "unknown")
 
         shadow_url = f"{self.shadow_backend_url}/v1/chat/completions"
@@ -171,20 +169,12 @@ class ShadowTrafficReplayer:
 
         # Extract textual contents and token counts
         prod_choices = prod_resp_json.get("choices", [])
-        prod_content = (
-            prod_choices[0].get("message", {}).get("content", "") if prod_choices else ""
-        )
-        prod_tokens = (
-            prod_resp_json.get("usage", {}).get("completion_tokens", len(prod_content.split()))
-        )
+        prod_content = prod_choices[0].get("message", {}).get("content", "") if prod_choices else ""
+        prod_tokens = prod_resp_json.get("usage", {}).get("completion_tokens", len(prod_content.split()))
 
         shadow_choices = shadow_resp_json.get("choices", [])
-        shadow_content = (
-            shadow_choices[0].get("message", {}).get("content", "") if shadow_choices else ""
-        )
-        shadow_tokens = (
-            shadow_resp_json.get("usage", {}).get("completion_tokens", len(shadow_content.split()))
-        )
+        shadow_content = shadow_choices[0].get("message", {}).get("content", "") if shadow_choices else ""
+        shadow_tokens = shadow_resp_json.get("usage", {}).get("completion_tokens", len(shadow_content.split()))
 
         token_ratio = round(shadow_tokens / max(prod_tokens, 1), 3)
         similarity = compute_lexical_similarity(prod_content, shadow_content)

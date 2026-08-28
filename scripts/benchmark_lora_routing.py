@@ -91,27 +91,28 @@ async def run_benchmark(
             base_model = resp.headers.get("X-LoRA-Base-Model", "unknown")
             cache_status = resp.headers.get("X-Semantic-Cache-Status", "MISS")
 
-            passed = (
-                resp.status_code == 200
-                and (adapter_active == q["expected_adapter"] or q["expected_adapter"] == "none")
+            passed = resp.status_code == 200 and (
+                adapter_active == q["expected_adapter"] or q["expected_adapter"] == "none"
             )
             print(
-                f"  [{i+1:2d}] {q['model_id']:<45} | {lat_ms:6.1f}ms | "
+                f"  [{i + 1:2d}] {q['model_id']:<45} | {lat_ms:6.1f}ms | "
                 f"Adapter: {adapter_active:<15} | HTTP {resp.status_code} "
                 f"[{'OK' if passed else 'FAIL'}]"
             )
 
-            results.append({
-                "target": q["target"],
-                "requested_model": q["model_id"],
-                "expected_adapter": q["expected_adapter"],
-                "resolved_adapter": adapter_active,
-                "resolved_base_model": base_model,
-                "latency_ms": round(lat_ms, 2),
-                "status_code": resp.status_code,
-                "cache_status": cache_status,
-                "passed": passed,
-            })
+            results.append(
+                {
+                    "target": q["target"],
+                    "requested_model": q["model_id"],
+                    "expected_adapter": q["expected_adapter"],
+                    "resolved_adapter": adapter_active,
+                    "resolved_base_model": base_model,
+                    "latency_ms": round(lat_ms, 2),
+                    "status_code": resp.status_code,
+                    "cache_status": cache_status,
+                    "passed": passed,
+                }
+            )
 
     # VRAM Economics Analysis
     base_model_vram_gb = 4.40  # Qwen2.5-7B AWQ Marlin INT4

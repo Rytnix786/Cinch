@@ -105,9 +105,7 @@ class VLLMSmokeClient:
 
             has_expected = True
             if expected_model:
-                has_expected = any(
-                    m == expected_model or expected_model in m for m in models
-                )
+                has_expected = any(m == expected_model or expected_model in m for m in models)
 
             return ModelsResult(
                 models=models,
@@ -233,9 +231,7 @@ class VLLMSmokeClient:
 
 
 def parse_args(args: Optional[list[str]] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Run smoke test against local vLLM serving container."
-    )
+    parser = argparse.ArgumentParser(description="Run smoke test against local vLLM serving container.")
     parser.add_argument(
         "--base-url",
         default="http://localhost:8000",

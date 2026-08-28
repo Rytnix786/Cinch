@@ -115,4 +115,3 @@ def test_kubectl_client_dry_run() -> None:
         pass  # Skip if kubectl binary is not in PATH
     except subprocess.CalledProcessError as exc:
         raise AssertionError(f"kubectl kustomize failed:\n{exc.output}") from exc
-

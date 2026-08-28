@@ -87,19 +87,21 @@ async def run_benchmark(
             status_match = (resp.status_code == 200) and (sampled_header == scenario["expect_sampled"])
 
             print(
-                f"  [{i+1:2d}] {scenario['name']:<32} | {lat_ms:6.1f}ms | "
+                f"  [{i + 1:2d}] {scenario['name']:<32} | {lat_ms:6.1f}ms | "
                 f"Status: {resp.status_code} | Sampled: {str(sampled_header):<5} "
                 f"[{'PASS' if status_match else 'FAIL'}]"
             )
 
-            results.append({
-                "scenario": scenario["name"],
-                "prompt": scenario["prompt"],
-                "status_code": resp.status_code,
-                "latency_ms": round(lat_ms, 2),
-                "shadow_sampled": sampled_header,
-                "passed": status_match,
-            })
+            results.append(
+                {
+                    "scenario": scenario["name"],
+                    "prompt": scenario["prompt"],
+                    "status_code": resp.status_code,
+                    "latency_ms": round(lat_ms, 2),
+                    "shadow_sampled": sampled_header,
+                    "passed": status_match,
+                }
+            )
 
         # Wait briefly for background shadow dispatch tasks to complete
         print("\n[Step 3] Waiting for asynchronous shadow replay background workers...")

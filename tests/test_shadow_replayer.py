@@ -93,6 +93,7 @@ def test_ring_buffer_trace_eviction() -> None:
     # Directly insert records
     for i in range(5):
         from gateway.shadow_replayer import ShadowTraceRecord
+
         rec = ShadowTraceRecord(
             trace_id=f"t_{i}",
             model="Qwen",

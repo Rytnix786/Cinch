@@ -10,6 +10,7 @@ from gateway.semantic_cache import SemanticCache, _cosine, _tf, _tokenize
 # Tokenizer & vector utilities
 # ---------------------------------------------------------------------------
 
+
 def test_tokenize_removes_stopwords() -> None:
     tokens = _tokenize("How do I connect to Postgres in Python?")
     assert "how" not in tokens

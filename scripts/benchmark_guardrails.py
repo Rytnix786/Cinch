@@ -97,22 +97,24 @@ async def run_benchmark(
                 passed = resp.status_code == 200 and guard_status == "PASSED"
 
             print(
-                f"  [{i+1:2d}] {scenario['name']:<35} | {lat_ms:6.1f}ms | "
+                f"  [{i + 1:2d}] {scenario['name']:<35} | {lat_ms:6.1f}ms | "
                 f"Status: {guard_status:<8} | HTTP {resp.status_code} "
                 f"[{'PASS' if passed else 'FAIL'}]"
             )
 
-            results.append({
-                "scenario": scenario["name"],
-                "category": scenario["category"],
-                "prompt": scenario["prompt"],
-                "status_code": resp.status_code,
-                "guard_status": guard_status,
-                "violation": violation,
-                "pii_redacted": pii_redacted == "true",
-                "latency_ms": round(lat_ms, 2),
-                "passed": passed,
-            })
+            results.append(
+                {
+                    "scenario": scenario["name"],
+                    "category": scenario["category"],
+                    "prompt": scenario["prompt"],
+                    "status_code": resp.status_code,
+                    "guard_status": guard_status,
+                    "violation": violation,
+                    "pii_redacted": pii_redacted == "true",
+                    "latency_ms": round(lat_ms, 2),
+                    "passed": passed,
+                }
+            )
 
     total = len(results)
     passed_count = sum(1 for r in results if r["passed"])

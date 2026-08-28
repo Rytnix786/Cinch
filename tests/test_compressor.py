@@ -28,12 +28,7 @@ def test_verbose_rag_prompt_compaction() -> None:
 
 def test_code_block_exact_preservation() -> None:
     compressor = PromptCompressor(min_tokens=20, target_ratio=0.60, preserve_code_blocks=True)
-    code_block = (
-        "```python\n"
-        "def compute_gradients(weights, loss):\n"
-        "    return np.dot(weights.T, loss) * 0.01\n"
-        "```"
-    )
+    code_block = "```python\ndef compute_gradients(weights, loss):\n    return np.dot(weights.T, loss) * 0.01\n```"
     text = (
         "Please note that in order to properly inspect the neural network training pipeline, "
         "here is the exact implementation code:\n"
@@ -113,9 +108,7 @@ def test_sub_millisecond_latency() -> None:
 def test_compressor_metrics_tracking() -> None:
     compressor = PromptCompressor(min_tokens=10, target_ratio=0.60)
     compressor.compress_text("Short")  # bypassed (< 10)
-    compressor.compress_text(
-        "In order to effectively deploy this, please note that we need 4 replicas."
-    )
+    compressor.compress_text("In order to effectively deploy this, please note that we need 4 replicas.")
 
     metrics = compressor.get_metrics()
     assert metrics["enabled"] is True

@@ -40,7 +40,7 @@ ENVIRONMENT_SPEC = {
         "warmup_iterations": 2,
         "evaluation_iterations": 6,
         "sample_prompts_count": 4,
-    }
+    },
 }
 
 BENCHMARK_PROMPTS = [
@@ -92,7 +92,9 @@ async def main():
     parser = argparse.ArgumentParser(description="Cinch Reproducible Benchmark Runner")
     parser.add_argument("--gateway-url", default="http://localhost:8081", help="Cinch Gateway URL")
     parser.add_argument("--api-key", default="cinch-prod-key", help="Gateway Bearer API Key")
-    parser.add_argument("--output-file", default="benchmarks/results/reproducible_benchmark_run.json", help="Output JSON path")
+    parser.add_argument(
+        "--output-file", default="benchmarks/results/reproducible_benchmark_run.json", help="Output JSON path"
+    )
     args = parser.parse_args()
 
     print("=" * 80)
@@ -102,7 +104,9 @@ async def main():
     print(f"  • Target GPU:     {ENVIRONMENT_SPEC['target_hardware']['gpu']}")
     print(f"  • CUDA Version:   {ENVIRONMENT_SPEC['target_hardware']['cuda_version']}")
     print(f"  • Python Runtime: {ENVIRONMENT_SPEC['target_hardware']['python_version']}")
-    print(f"  • Model & Format: {ENVIRONMENT_SPEC['model_configuration']['primary_model']} ({ENVIRONMENT_SPEC['model_configuration']['quantization_format']})")
+    print(
+        f"  • Model & Format: {ENVIRONMENT_SPEC['model_configuration']['primary_model']} ({ENVIRONMENT_SPEC['model_configuration']['quantization_format']})"
+    )
     print("=" * 80)
 
     headers = {
@@ -137,7 +141,7 @@ async def main():
 
         print(f"  • Cold Forward Pass Latency: {cold_res['latency_ms']:.2f} ms (Status: {cold_res['cache_status']})")
         print(f"  • Hot Cache Lookup Latency:   {hot_res['latency_ms']:.2f} ms (Status: {hot_res['cache_status']})")
-        speedup = (cold_res['latency_ms'] / hot_res['latency_ms']) if hot_res['latency_ms'] > 0 else 1.0
+        speedup = (cold_res["latency_ms"] / hot_res["latency_ms"]) if hot_res["latency_ms"] > 0 else 1.0
         print(f"  • Semantic Cache Speedup:     {speedup:.1f}x Latency Reduction at 0W GPU Power")
 
         results["measurements"]["semantic_cache"] = {
@@ -149,10 +153,7 @@ async def main():
 
         # 3. Concurrent Throughput Benchmark
         print("\n[Phase 3] Benchmarking Quantized Inference Throughput (Concurrency C=4)...")
-        tasks = [
-            run_single_inference(client, args.gateway_url, headers, p, max_tokens=64)
-            for p in BENCHMARK_PROMPTS
-        ]
+        tasks = [run_single_inference(client, args.gateway_url, headers, p, max_tokens=64) for p in BENCHMARK_PROMPTS]
         t_batch_start = time.perf_counter()
         batch_results = await asyncio.gather(*tasks)
         t_batch_elapsed = time.perf_counter() - t_batch_start

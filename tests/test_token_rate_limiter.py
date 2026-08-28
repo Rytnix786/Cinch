@@ -64,7 +64,9 @@ def test_sliding_window_tpm_enforcement() -> None:
     now = 1000.0
 
     # Request 400 tokens out of 1000 budget (allowed)
-    allowed, _, rem_tok, _, _ = limiter.check("client_b", max_requests=10, max_tokens=1000, requested_tokens=400, now=now)
+    allowed, _, rem_tok, _, _ = limiter.check(
+        "client_b", max_requests=10, max_tokens=1000, requested_tokens=400, now=now
+    )
     assert allowed is True
     assert rem_tok == 600
 

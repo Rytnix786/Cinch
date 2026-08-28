@@ -178,64 +178,68 @@ class LoRARouter:
             compound_id = f"{adapter.base_model}:{name}"
             # 1. Add compound model identifier (e.g. Qwen2.5-7B:sql-coder)
             if compound_id not in existing_ids:
-                synthesized_entries.append({
-                    "id": compound_id,
-                    "object": "model",
-                    "created": created_timestamp,
-                    "owned_by": "cinch-lora-router",
-                    "root": adapter.base_model,
-                    "parent": adapter.base_model,
-                    "adapter": name,
-                    "description": adapter.description,
-                    "rank": adapter.rank,
-                    "permission": [
-                        {
-                            "id": f"modelperm-{compound_id}",
-                            "object": "model_permission",
-                            "created": created_timestamp,
-                            "allow_create_engine": False,
-                            "allow_sampling": True,
-                            "allow_logprobs": True,
-                            "allow_search_indices": False,
-                            "allow_view": True,
-                            "allow_fine_tuning": False,
-                            "organization": "*",
-                            "group": None,
-                            "is_blocking": False,
-                        }
-                    ],
-                })
+                synthesized_entries.append(
+                    {
+                        "id": compound_id,
+                        "object": "model",
+                        "created": created_timestamp,
+                        "owned_by": "cinch-lora-router",
+                        "root": adapter.base_model,
+                        "parent": adapter.base_model,
+                        "adapter": name,
+                        "description": adapter.description,
+                        "rank": adapter.rank,
+                        "permission": [
+                            {
+                                "id": f"modelperm-{compound_id}",
+                                "object": "model_permission",
+                                "created": created_timestamp,
+                                "allow_create_engine": False,
+                                "allow_sampling": True,
+                                "allow_logprobs": True,
+                                "allow_search_indices": False,
+                                "allow_view": True,
+                                "allow_fine_tuning": False,
+                                "organization": "*",
+                                "group": None,
+                                "is_blocking": False,
+                            }
+                        ],
+                    }
+                )
                 existing_ids.add(compound_id)
 
             # 2. Add bare alias (e.g. sql-coder)
             if name not in existing_ids:
-                synthesized_entries.append({
-                    "id": name,
-                    "object": "model",
-                    "created": created_timestamp,
-                    "owned_by": "cinch-lora-router",
-                    "root": adapter.base_model,
-                    "parent": adapter.base_model,
-                    "adapter": name,
-                    "description": adapter.description,
-                    "rank": adapter.rank,
-                    "permission": [
-                        {
-                            "id": f"modelperm-{name}",
-                            "object": "model_permission",
-                            "created": created_timestamp,
-                            "allow_create_engine": False,
-                            "allow_sampling": True,
-                            "allow_logprobs": True,
-                            "allow_search_indices": False,
-                            "allow_view": True,
-                            "allow_fine_tuning": False,
-                            "organization": "*",
-                            "group": None,
-                            "is_blocking": False,
-                        }
-                    ],
-                })
+                synthesized_entries.append(
+                    {
+                        "id": name,
+                        "object": "model",
+                        "created": created_timestamp,
+                        "owned_by": "cinch-lora-router",
+                        "root": adapter.base_model,
+                        "parent": adapter.base_model,
+                        "adapter": name,
+                        "description": adapter.description,
+                        "rank": adapter.rank,
+                        "permission": [
+                            {
+                                "id": f"modelperm-{name}",
+                                "object": "model_permission",
+                                "created": created_timestamp,
+                                "allow_create_engine": False,
+                                "allow_sampling": True,
+                                "allow_logprobs": True,
+                                "allow_search_indices": False,
+                                "allow_view": True,
+                                "allow_fine_tuning": False,
+                                "organization": "*",
+                                "group": None,
+                                "is_blocking": False,
+                            }
+                        ],
+                    }
+                )
                 existing_ids.add(name)
 
         result["data"] = existing_data + synthesized_entries

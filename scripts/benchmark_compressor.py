@@ -109,29 +109,29 @@ async def run_benchmark(
             passed = is_compacted == scenario["expect_compacted"]
 
             print(
-                f"  [{i+1:2d}] {scenario['name']:<35} | {lat_ms:6.1f}ms | "
+                f"  [{i + 1:2d}] {scenario['name']:<35} | {lat_ms:6.1f}ms | "
                 f"Tokens: {orig_tok:3d} -> {comp_tok:3d} (-{reduction_pct:4.1f}%) | "
                 f"Compacted: {str(is_compacted):<5} [{'PASS' if passed else 'FAIL'}]"
             )
 
-            results.append({
-                "scenario": scenario["name"],
-                "category": scenario["category"],
-                "original_tokens": orig_tok,
-                "compacted_tokens": comp_tok,
-                "tokens_saved": orig_tok - comp_tok,
-                "reduction_pct": reduction_pct,
-                "is_compacted": is_compacted,
-                "latency_ms": round(lat_ms, 2),
-                "passed": passed,
-            })
+            results.append(
+                {
+                    "scenario": scenario["name"],
+                    "category": scenario["category"],
+                    "original_tokens": orig_tok,
+                    "compacted_tokens": comp_tok,
+                    "tokens_saved": orig_tok - comp_tok,
+                    "reduction_pct": reduction_pct,
+                    "is_compacted": is_compacted,
+                    "latency_ms": round(lat_ms, 2),
+                    "passed": passed,
+                }
+            )
 
     total = len(results)
     passed_count = sum(1 for r in results if r["passed"])
     compacted_scenarios = [r for r in results if r["is_compacted"]]
-    avg_reduction = (
-        sum(r["reduction_pct"] for r in compacted_scenarios) / max(len(compacted_scenarios), 1)
-    )
+    avg_reduction = sum(r["reduction_pct"] for r in compacted_scenarios) / max(len(compacted_scenarios), 1)
     total_tokens_orig = sum(r["original_tokens"] for r in results)
     total_tokens_saved = sum(r["tokens_saved"] for r in results)
     avg_latency = sum(r["latency_ms"] for r in results) / max(total, 1)

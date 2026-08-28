@@ -23,7 +23,9 @@ async def test_ui_static_css_and_js() -> None:
         # Style
         resp_css = await client.get("/ui/style.css")
         assert resp_css.status_code == 200
-        assert "text/css" in resp_css.headers.get("content-type", "") or "text/plain" in resp_css.headers.get("content-type", "")
+        assert "text/css" in resp_css.headers.get("content-type", "") or "text/plain" in resp_css.headers.get(
+            "content-type", ""
+        )
         assert "--bg-primary" in resp_css.text
 
         # App JS
