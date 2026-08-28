@@ -4,7 +4,7 @@
 
 ### Self-Hosted LLM Serving Platform & Asynchronous Gateway Control Plane
 
-[![CI](https://github.com/Rytnix786/Cinch/actions/workflows/ci.yml/badge.svg)](https://github.com/Rytnix786/Cinch/actions/workflows/ci.yml)
+[![CI](https://github.com/Rytnix786/Cinch/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Rytnix786/Cinch/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.14-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![CUDA](https://img.shields.io/badge/CUDA-12.4-76B900?style=flat-square&logo=nvidia&logoColor=white)](https://developer.nvidia.com/cuda-toolkit)
 [![vLLM](https://img.shields.io/badge/vLLM-0.6.3-8B5CF6?style=flat-square)](https://github.com/vllm-project/vllm)
