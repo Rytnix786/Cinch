@@ -19,11 +19,41 @@ document.addEventListener("DOMContentLoaded", () => {
   // Parameter Slider Binding
   const sliderMaxTokens = document.getElementById("slider-max-tokens");
   const valMaxTokens = document.getElementById("val-max-tokens");
+  const presetBtns = document.querySelectorAll(".btn-preset");
+
+  function setMaxTokens(val) {
+    if (sliderMaxTokens && valMaxTokens) {
+      sliderMaxTokens.value = val;
+      valMaxTokens.textContent = val;
+      presetBtns.forEach(btn => {
+        if (btn.getAttribute("data-val") === String(val)) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+    }
+  }
+
   if (sliderMaxTokens && valMaxTokens) {
     sliderMaxTokens.addEventListener("input", (e) => {
       valMaxTokens.textContent = e.target.value;
+      presetBtns.forEach(btn => {
+        if (btn.getAttribute("data-val") === String(e.target.value)) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
     });
   }
+
+  presetBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const val = parseInt(btn.getAttribute("data-val"), 10);
+      setMaxTokens(val);
+    });
+  });
 
   const sliderTemp = document.getElementById("slider-temp");
   const valTemp = document.getElementById("val-temp");
@@ -64,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const teamId = document.getElementById("team-input").value.trim() || "engineering";
       const sysPrompt = document.getElementById("sys-prompt").value.trim();
       const userPrompt = document.getElementById("user-prompt").value.trim();
-      const maxTokens = parseInt(sliderMaxTokens.value, 10);
+      const maxTokens = parseInt(sliderMaxTokens.value, 10) || 1024;
       const temperature = parseFloat(sliderTemp.value);
       const isStreaming = document.getElementById("toggle-stream").checked;
       const enableCompaction = document.getElementById("toggle-compaction").checked;
@@ -96,9 +126,16 @@ document.addEventListener("DOMContentLoaded", () => {
       btnDispatch.disabled = true;
       btnDispatch.textContent = "Streaming...";
 
+      const badgeFinish = document.getElementById("badge-finish-status");
+      if (badgeFinish) {
+        badgeFinish.className = "badge";
+        badgeFinish.textContent = "STATUS: STREAMING...";
+      }
+
       const t0 = performance.now();
       let ttft = null;
       let generatedTokens = 0;
+      let lastFinishReason = null;
 
       try {
         const resp = await fetch("/v1/chat/completions", {
@@ -137,6 +174,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!resp.ok) {
           const errText = await resp.text();
           streamOutput.textContent = `[HTTP ${resp.status} Error]: ${errText}`;
+          if (badgeFinish) {
+            badgeFinish.className = "badge badge-danger";
+            badgeFinish.textContent = `ERROR: HTTP ${resp.status}`;
+          }
           btnDispatch.disabled = false;
           btnDispatch.innerHTML = '<span class="btn-icon">▶</span> Dispatch Inference';
           return;
@@ -166,6 +207,8 @@ document.addEventListener("DOMContentLoaded", () => {
                   try {
                     const parsed = JSON.parse(trimmed.slice(6));
                     const delta = parsed.choices?.[0]?.delta?.content || "";
+                    const reason = parsed.choices?.[0]?.finish_reason;
+                    if (reason) lastFinishReason = reason;
                     if (delta) {
                       streamOutput.textContent += delta;
                       generatedTokens += 1;
@@ -177,14 +220,46 @@ document.addEventListener("DOMContentLoaded", () => {
               }
             }
           }
+
+          // Process any trailing leftover in buffer
+          if (buffer && buffer.trim()) {
+            const trimmed = buffer.trim();
+            if (trimmed.startsWith("data: ") && trimmed !== "data: [DONE]") {
+              try {
+                const parsed = JSON.parse(trimmed.slice(6));
+                const delta = parsed.choices?.[0]?.delta?.content || "";
+                const reason = parsed.choices?.[0]?.finish_reason;
+                if (reason) lastFinishReason = reason;
+                if (delta) {
+                  streamOutput.textContent += delta;
+                  generatedTokens += 1;
+                }
+              } catch (e) {}
+            }
+          }
         } else {
           // Non-streaming response
           const data = await resp.json();
           ttft = performance.now() - t0;
           if (statTtft) statTtft.textContent = `${Math.round(ttft)} ms`;
           const content = data.choices?.[0]?.message?.content || JSON.stringify(data, null, 2);
+          lastFinishReason = data.choices?.[0]?.finish_reason || "stop";
           streamOutput.textContent = content;
           generatedTokens = data.usage?.completion_tokens || content.split(/\s+/).length;
+        }
+
+        // Update finish status badge
+        if (badgeFinish) {
+          if (lastFinishReason === "stop") {
+            badgeFinish.className = "badge badge-success";
+            badgeFinish.textContent = "FINISH: COMPLETE (STOP)";
+          } else if (lastFinishReason === "length") {
+            badgeFinish.className = "badge text-warning";
+            badgeFinish.textContent = `FINISH: TOKEN LIMIT REACHED (${maxTokens})`;
+          } else {
+            badgeFinish.className = "badge badge-success";
+            badgeFinish.textContent = `FINISH: ${lastFinishReason || 'DONE'}`;
+          }
         }
 
         const totalLatency = performance.now() - t0;
@@ -196,6 +271,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       } catch (err) {
         streamOutput.textContent = `Network / Dispatch Error: ${err}`;
+        if (badgeFinish) {
+          badgeFinish.className = "badge text-danger";
+          badgeFinish.textContent = "DISPATCH ERROR";
+        }
       } finally {
         btnDispatch.disabled = false;
         btnDispatch.innerHTML = '<span class="btn-icon">▶</span> Dispatch Inference';

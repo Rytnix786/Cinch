@@ -593,6 +593,8 @@ async def chat_completions(
 
     # Strip gateway routing directives before forwarding to upstream vLLM
     upstream_body = {k: v for k, v in body.items() if k not in ("priority",)}
+    if "max_tokens" not in upstream_body and "max_completion_tokens" not in upstream_body:
+        upstream_body["max_tokens"] = 1024
     if current_settings.tool_engine_enabled and "tools" in upstream_body:
         upstream_body, _ = gateway_state.tool_engine.prepare_upstream_request(upstream_body)
 

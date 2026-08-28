@@ -219,7 +219,42 @@ textarea.form-control {
   color: var(--text-muted);
 }
 input[type="range"] {
+  width: 100%;
   accent-color: var(--accent);
+}
+.token-presets {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+.btn-preset {
+  flex: 1;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  padding: 3px 0;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  transition: all 0.15s ease;
+}
+.btn-preset:hover {
+  background: var(--bg-surface);
+  color: var(--text-main);
+  border-color: var(--accent);
+}
+.btn-preset.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.temp-hint {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  margin-top: 6px;
+  font-family: var(--font-mono);
 }
 
 .toggles-grid {

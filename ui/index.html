@@ -76,12 +76,20 @@
 
           <div class="sliders-grid">
             <div class="form-group">
-              <div class="slider-label"><span>Max Tokens</span><span id="val-max-tokens">128</span></div>
-              <input type="range" id="slider-max-tokens" min="16" max="512" step="16" value="128">
+              <div class="slider-label"><span>Max Output Tokens</span><span id="val-max-tokens">1024</span></div>
+              <input type="range" id="slider-max-tokens" min="128" max="4096" step="128" value="1024">
+              <div class="token-presets">
+                <button type="button" class="btn-preset" data-val="256">256</button>
+                <button type="button" class="btn-preset" data-val="512">512</button>
+                <button type="button" class="btn-preset active" data-val="1024">1024</button>
+                <button type="button" class="btn-preset" data-val="2048">2048</button>
+                <button type="button" class="btn-preset" data-val="4096">4096</button>
+              </div>
             </div>
             <div class="form-group">
               <div class="slider-label"><span>Temperature</span><span id="val-temp">0.7</span></div>
               <input type="range" id="slider-temp" min="0.0" max="1.0" step="0.05" value="0.7">
+              <div class="temp-hint">0.0 = Deterministic, 0.7 = Balanced</div>
             </div>
           </div>
 
@@ -144,7 +152,10 @@
           <div class="output-container">
             <div class="output-header">
               <span>Response Stream</span>
-              <span class="badge" id="badge-cache-status">CACHE: MISS</span>
+              <div class="badges-row">
+                <span class="badge" id="badge-cache-status">CACHE: MISS</span>
+                <span class="badge" id="badge-finish-status">STATUS: READY</span>
+              </div>
             </div>
             <div class="output-body" id="stream-output">
               <span class="placeholder-text">Click "Dispatch Inference" to stream response tokens in real time...</span>
