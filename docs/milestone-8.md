@@ -65,7 +65,7 @@ All pods passed in-cluster readiness probes (`/health`) and received load-balanc
 
 ---
 
-## 4. Honest Scope Boundary (PRD §6)
+## 4. Honest Scope Boundary (Architectural Design Scope)
 
 - **Tested in Cluster**: Real Horizontal Pod Autoscaling of the stateless FastAPI gateway layer across a multi-node local k3d cluster using CPU utilization triggers under load.
 - **Production Extension Path**: Cloud GPU worker scaling (`k8s/production-extension/`) using KEDA and queue depth metrics (`vllm:num_requests_waiting`) is formally architected and documented as the cloud path, not claimed as executed on single-GPU developer hardware.

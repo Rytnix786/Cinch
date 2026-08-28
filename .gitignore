@@ -28,7 +28,9 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Agent skills
-.agent/skills/
-skills/
+# Agent configuration & AI scaffolding
+.agent/
+AGENTS.md
+PRD*.md
+PRD*.MD
 

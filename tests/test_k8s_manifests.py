@@ -23,7 +23,7 @@ def test_k8s_yaml_syntax_and_structure() -> None:
 
 
 def test_gateway_deployment_spec() -> None:
-    """Verify Gateway Deployment adheres to PRD resource, probe, and replica specs."""
+    """Verify Gateway Deployment adheres to production resource, probe, and replica specs."""
     deploy_file = pathlib.Path(__file__).parent.parent / "k8s" / "gateway-deployment.yaml"
     with open(deploy_file, "r", encoding="utf-8") as f:
         deploy = yaml.safe_load(f)

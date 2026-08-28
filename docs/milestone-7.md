@@ -58,9 +58,9 @@ All core manifests reside under `k8s/` and bundle via `k8s/kustomization.yaml`.
 
 ---
 
-## 3. Production Extension Path (PRD §6)
+## 3. Production Extension Path (Cluster Architecture Scope)
 
-As defined in PRD.md §6, single-GPU developer hardware limits real multi-pod GPU placement to one device. Production multi-node cloud clusters scale GPU workers through the dedicated manifests in `k8s/production-extension/`:
+In single-GPU developer environments, physical GPU allocation is bounded to one device. Multi-node production clusters scale GPU workers through the dedicated manifests in `k8s/production-extension/`:
 1. **GPU Worker Deployment (`k8s/production-extension/vllm-gpu-deployment.yaml`)**: Defines NVIDIA GPU node selectors, `nvidia.com/gpu: 1` limits, `/dev/shm` shared memory mounts (4Gi), and HuggingFace cache persistent volume claims.
 2. **KEDA Autoscaler (`k8s/production-extension/keda-scaledobject.yaml`)**: Defines queue-depth autoscaling triggers on `vllm:num_requests_waiting > 4` with custom scale-up (100% per 15s) and scale-down stabilization windows (300s).
 
